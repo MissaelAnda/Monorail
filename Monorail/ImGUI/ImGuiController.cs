@@ -58,6 +58,13 @@ namespace Monorail.ImGUI
 
         readonly List<char> PressedChars = new List<char>();
 
+
+        #region Viewporting
+
+        private ImGuiViewportWindow _mainViewportWindow;
+
+        #endregion
+
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
@@ -71,6 +78,8 @@ namespace Monorail.ImGUI
             ImGui.StyleColorsDark();
             var io = ImGui.GetIO();
             io.Fonts.AddFontDefault();
+
+            io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
             io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
