@@ -83,6 +83,12 @@ namespace Monorail
                 _layerStack[i].OnUpdate(delta);
         }
 
+        public void Render(double delta)
+        {
+            for (int i = 0; i < _layerStack.Count; i++)
+                _layerStack[i].OnRender(delta);
+        }
+
         public void RegisterEvents(Layer layer)
         {
             var actions = new EventList();

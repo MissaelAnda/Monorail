@@ -1,6 +1,7 @@
 ﻿using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using ImGuiNET;
+using Monorail.Debug;
 
 namespace Monorail.ImGUI
 {
@@ -22,6 +23,11 @@ namespace Monorail.ImGUI
 
         public override void OnUpdate(double delta)
         {
+            
+        }
+
+        public override void OnRender(double delta)
+        {
             _controller.Update(_window, delta);
             ImGui.ShowDemoWindow();
             _controller.Render();
@@ -30,11 +36,11 @@ namespace Monorail.ImGUI
         public override void OnRegisterEvents(ref EventList events)
         {
             events.Resize = OnResize;
-            events.KeyDown = OnKeyPress;
+            events.TextInput = OnTextInput;
         }
 
         public void OnResize(ResizeEventArgs args) => _controller.WindowResized(args.Width, args.Height);
 
-        public void OnKeyPress(KeyboardKeyEventArgs args) => _controller.PressChar((char)args.ScanCode);
+        public void OnTextInput(TextInputEventArgs args) => _controller.PressChar((char)args.Unicode);
     }
 }

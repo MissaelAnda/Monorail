@@ -8,6 +8,7 @@
 
         public virtual void OnAttached() { }
         public virtual void OnUpdate(double delta) { }
+        public virtual void OnRender(double delta) { }
         public virtual void OnRegisterEvents(ref EventList eventManager) { }
         public virtual void OnDetached() { }
     }

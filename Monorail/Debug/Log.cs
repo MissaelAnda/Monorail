@@ -17,6 +17,8 @@ namespace Monorail.Debug
 
         public void Info(string pattern, params object[] args) => LogMessage(pattern, Color.Cyan, args);
 
+        public void Notification(string pattern, params object[] args) => LogMessage(pattern, Color.Yellow, args);
+
         public void Succes(string pattern, params object[] args) => LogMessage(pattern, Color.Green, args);
 
         public void Warn(string pattern, params object[] args) => LogMessage(pattern, Color.Orange, args);

@@ -56,8 +56,6 @@ namespace Monorail.ImGUI
 
         private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
-        MouseState PrevMouseState;
-        KeyboardState PrevKeyboardState;
         readonly List<char> PressedChars = new List<char>();
 
         /// <summary>
@@ -83,9 +81,6 @@ namespace Monorail.ImGUI
 
             SetPerFrameImGuiData(1f / 60f);
 
-            PrevKeyboardState = gw.KeyboardState;
-            PrevMouseState = gw.MouseState;
-
             ImGui.NewFrame();
             _frameBegun = true;
         }
@@ -103,13 +98,13 @@ namespace Monorail.ImGUI
 
         public void CreateDeviceResources()
         {
-            _vertexArray = GL.GenVertexArray();
+            GL.CreateVertexArrays(1, out _vertexArray);
 
             _vertexBufferSize = 10000;
             _indexBufferSize = 2000;
 
-            _vertexBuffer = GL.GenBuffer();
-            _indexBuffer = GL.GenBuffer();
+            GL.CreateBuffers(1, out _vertexBuffer);
+            GL.CreateBuffers(1, out _indexBuffer);
 
             GL.NamedBufferData(_vertexBuffer, _vertexBufferSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
             GL.NamedBufferData(_indexBuffer, _indexBufferSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
@@ -176,11 +171,11 @@ namespace Monorail.ImGUI
             //InternalFormat = srgb ? Srgb8Alpha8 : SizedInternalFormat.Rgba8;
             var MipmapLevels = (int)Math.Floor(Math.Log(Math.Max(width, height), 2));
 
-            _texture = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2D, _texture);
+            GL.CreateTextures(TextureTarget.Texture2D, 1, out _texture);
+            //GL.BindTexture(TextureTarget.Texture2D, _texture);
             GL.TextureStorage2D(_texture, MipmapLevels, SizedInternalFormat.Rgba8, width, height);
 
-            GL.TextureSubImage2D(_texture, 0, 0, 0, width, height, PixelFormat.Bgra, PixelType.UnsignedByte, pixels);
+            GL.TextureSubImage2D(_texture, 0, 0, 0, width, height, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
 
             GL.TextureParameter(_texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
             GL.TextureParameter(_texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
@@ -189,7 +184,7 @@ namespace Monorail.ImGUI
 
             GL.TextureParameter(_texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
             GL.TextureParameter(_texture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.BindTexture(TextureTarget.Texture2D, 0);
+            //GL.BindTexture(TextureTarget.Texture2D, 0);
 
             io.Fonts.SetTexID((IntPtr)_texture);
 
@@ -247,19 +242,17 @@ namespace Monorail.ImGUI
         {
             ImGuiIOPtr io = ImGui.GetIO();
 
-            MouseState MouseState = wnd.MouseState;
-            KeyboardState KeyboardState = wnd.KeyboardState;
+            MouseState MouseState = wnd.MouseState.GetSnapshot();
+            KeyboardState KeyboardState = wnd.KeyboardState.GetSnapshot();
 
             io.MouseDown[0] = MouseState.IsButtonDown(MouseButton.Left);
             io.MouseDown[1] = MouseState.IsButtonDown(MouseButton.Right);
             io.MouseDown[2] = MouseState.IsButtonDown(MouseButton.Middle);
+            io.MousePos = new System.Numerics.Vector2((int)MouseState.Position.X, (int)MouseState.Position.Y);
 
-            var screenPoint = new Vector2i((int)MouseState.Position.X, (int)MouseState.Position.Y);
-            var point = wnd.PointToClient(screenPoint);
-            io.MousePos = new System.Numerics.Vector2(point.X, point.Y);
-
-            io.MouseWheel = MouseState.Scroll.Y - PrevMouseState.Scroll.Y;
-            io.MouseWheelH = MouseState.Scroll.X - PrevMouseState.Scroll.X;
+            
+            io.MouseWheel = MouseState.ScrollDelta.Y;
+            io.MouseWheelH = MouseState.ScrollDelta.X;
 
             foreach (Keys key in Enum.GetValues(typeof(Keys)))
             {
@@ -277,9 +270,6 @@ namespace Monorail.ImGUI
             io.KeyAlt = KeyboardState.IsKeyDown(Keys.LeftAlt) || KeyboardState.IsKeyDown(Keys.RightAlt);
             io.KeyShift = KeyboardState.IsKeyDown(Keys.LeftShift) || KeyboardState.IsKeyDown(Keys.RightShift);
             io.KeySuper = KeyboardState.IsKeyDown(Keys.LeftSuper) || KeyboardState.IsKeyDown(Keys.RightSuper);
-
-            PrevMouseState = MouseState;
-            PrevKeyboardState = KeyboardState;
         }
 
         internal void PressChar(char keyChar)
@@ -320,7 +310,6 @@ namespace Monorail.ImGUI
             {
                 return;
             }
-
 
             for (int i = 0; i < draw_data.CmdListsCount; i++)
             {
@@ -433,8 +422,8 @@ namespace Monorail.ImGUI
         /// </summary>
         public void Dispose()
         {
-            //GL.DeleteProgram(_shaderProgram);
-            //GL.DeleteTexture(_texture);
+            GL.DeleteProgram(_shaderProgram);
+            GL.DeleteTexture(_texture);
         }
     }
 }
