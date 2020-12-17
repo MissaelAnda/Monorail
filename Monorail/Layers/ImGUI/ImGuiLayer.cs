@@ -1,9 +1,9 @@
-﻿using OpenTK.Windowing.Common;
+﻿using ImGuiNET;
+using Monorail.Layers.ImGUI;
+using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using ImGuiNET;
-using Monorail.Debug;
 
-namespace Monorail.ImGUI
+namespace Monorail.Layers
 {
     public class ImGuiLayer : Layer
     {
@@ -13,23 +13,19 @@ namespace Monorail.ImGUI
         public ImGuiLayer(GameWindow window) : base("ImGuiLayer")
         {
             _window = window;
-            _controller = new ImGuiController(_window.Size.X, _window.Size.Y, _window);
-        }
-
-        public override void OnAttached()
-        {
-            
+            _controller = new ImGuiController(_window.Size.X, _window.Size.Y);
         }
 
         public override void OnUpdate(double delta)
         {
-            
+            _controller.Update(_window, delta);
         }
 
         public override void OnRender(double delta)
         {
-            _controller.Update(_window, delta);
-            ImGui.ShowDemoWindow();
+            //Layout specification here
+            Editor.Start();
+
             _controller.Render();
         }
 

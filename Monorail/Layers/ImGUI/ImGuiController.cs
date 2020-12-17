@@ -7,8 +7,9 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Windowing.Desktop;
 using Monorail.Debug;
 using OpenTK.Mathematics;
+using Monorail.Renderer;
 
-namespace Monorail.ImGUI
+namespace Monorail.Layers.ImGUI
 {
     /// <summary>
     /// A modified version of Veldrid.ImGui's ImGuiRenderer.
@@ -43,13 +44,11 @@ namespace Monorail.ImGUI
         private bool _frameBegun;
 
         // Veldrid objects
-        private int _vertexArray;
-        private int _vertexBuffer;
+        private VertexArray _vao;
         private int _vertexBufferSize;
-        private int _indexBuffer;
         private int _indexBufferSize;
-        private int _shaderProgram;
-        private int _texture;
+        private ShaderProgram _shaderProgram;
+        private Texture _texture;
 
         private int _windowWidth;
         private int _windowHeight;
@@ -58,29 +57,21 @@ namespace Monorail.ImGUI
 
         readonly List<char> PressedChars = new List<char>();
 
-
-        #region Viewporting
-
-        private ImGuiViewportWindow _mainViewportWindow;
-
-        #endregion
-
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
-        public ImGuiController(int width, int height, GameWindow gw)
+        public ImGuiController(int width, int height)
         {
             _windowWidth = width;
             _windowHeight = height;
 
             IntPtr context = ImGui.CreateContext();
             ImGui.SetCurrentContext(context);
-            ImGui.StyleColorsDark();
+
             var io = ImGui.GetIO();
             io.Fonts.AddFontDefault();
 
             io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
             io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
             io.BackendFlags |= ImGuiBackendFlags.HasSetMousePos;
@@ -100,73 +91,44 @@ namespace Monorail.ImGUI
             _windowHeight = height;
         }
 
-        public void DestroyDeviceObjects()
-        {
-            Dispose();
-        }
-
         public void CreateDeviceResources()
         {
-            GL.CreateVertexArrays(1, out _vertexArray);
-
             _vertexBufferSize = 10000;
             _indexBufferSize = 2000;
+            
+            var vertexBuffer = new VertexBuffer();
+            vertexBuffer.AllocateEmpty(_vertexBufferSize, BufferUsageHint.DynamicDraw);
 
-            GL.CreateBuffers(1, out _vertexBuffer);
-            GL.CreateBuffers(1, out _indexBuffer);
+            var indexBuffer = new IndexBuffer();
+            indexBuffer.AllocateEmpty(_indexBufferSize, BufferUsageHint.DynamicDraw);
 
-            GL.NamedBufferData(_vertexBuffer, _vertexBufferSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
-            GL.NamedBufferData(_indexBuffer, _indexBufferSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            var imguiVertexLayout = new VertexLayout();
+            imguiVertexLayout.AddAttrib(new VertexAttrib("aPosition", VertexAttribDataType.Float2))
+                .AddAttrib(new VertexAttrib("aUV", VertexAttribDataType.Float2))
+                .AddAttrib(new VertexAttrib("aColor", VertexAttribDataType.UnsignedByte4, true));
+
+            VertexArray.AddVertexLayout("ImGUI_Layout", imguiVertexLayout);
+
+            _vao = new VertexArray("ImGUI_Layout", vertexBuffer, indexBuffer);
 
             RecreateFontDeviceTexture();
 
             // Compile Shaders
-            {
-                int vertexShader = GL.CreateShader(ShaderType.VertexShader);
-                GL.ShaderSource(vertexShader, VertexSource);
-                GL.CompileShader(vertexShader);
+            var vertexShader = Shader.FromSource(VertexSource, ShaderType.VertexShader);
+            var fragmentShader = Shader.FromSource(FragmentSource, ShaderType.FragmentShader);
 
-                string infoLogVert = GL.GetShaderInfoLog(vertexShader);
-                if (infoLogVert != String.Empty)
-                    throw new Exception($"Failed to compile Vertex Shader: {infoLogVert}");
+            _shaderProgram = new ShaderProgram();
+            _shaderProgram.AttachShader(vertexShader);
+            _shaderProgram.AttachShader(fragmentShader);
 
-                int fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-                GL.ShaderSource(fragmentShader, FragmentSource);
-                GL.CompileShader(fragmentShader);
+            _shaderProgram.LinkProgram();
 
-                infoLogVert = GL.GetShaderInfoLog(fragmentShader);
-                if (infoLogVert != String.Empty)
-                    throw new Exception($"Failed to compile Fragment Shader: {infoLogVert}");
+            _shaderProgram.DetachAllShaders();
 
-                _shaderProgram = GL.CreateProgram();
-                GL.AttachShader(_shaderProgram, vertexShader);
-                GL.AttachShader(_shaderProgram, fragmentShader);
+            vertexShader.Dispose();
+            fragmentShader.Dispose();
 
-                GL.LinkProgram(_shaderProgram);
-
-                GL.DetachShader(_shaderProgram, vertexShader);
-                GL.DetachShader(_shaderProgram, fragmentShader);
-                GL.DeleteShader(vertexShader);
-                GL.DeleteShader(fragmentShader);
-            }
-
-            // setup Vertex Array Attrib Pointers
-            {
-                GL.VertexArrayVertexBuffer(_vertexArray, 0, _vertexBuffer, IntPtr.Zero, Unsafe.SizeOf<ImDrawVert>());
-                GL.VertexArrayElementBuffer(_vertexArray, _indexBuffer);
-
-                GL.EnableVertexArrayAttrib(_vertexArray, 0);
-                GL.VertexArrayAttribBinding(_vertexArray, 0, 0);
-                GL.VertexArrayAttribFormat(_vertexArray, 0, 2, VertexAttribType.Float, false, 0);
-
-                GL.EnableVertexArrayAttrib(_vertexArray, 1);
-                GL.VertexArrayAttribBinding(_vertexArray, 1, 0);
-                GL.VertexArrayAttribFormat(_vertexArray, 1, 2, VertexAttribType.Float, false, 8);
-
-                GL.EnableVertexArrayAttrib(_vertexArray, 2);
-                GL.VertexArrayAttribBinding(_vertexArray, 2, 0);
-                GL.VertexArrayAttribFormat(_vertexArray, 2, 4, VertexAttribType.UnsignedByte, true, 16);
-            }
+            _shaderProgram.SetUniform1("in_fontTexture", 0);
         }
 
         /// <summary>
@@ -175,27 +137,12 @@ namespace Monorail.ImGUI
         public void RecreateFontDeviceTexture()
         {
             ImGuiIOPtr io = ImGui.GetIO();
-            io.Fonts.GetTexDataAsRGBA32(out IntPtr pixels, out int width, out int height, out int bytesPerPixel);
+            io.Fonts.GetTexDataAsRGBA32(out IntPtr pixels, out int width, out int height, out int _);
 
-            //InternalFormat = srgb ? Srgb8Alpha8 : SizedInternalFormat.Rgba8;
-            var MipmapLevels = (int)Math.Floor(Math.Log(Math.Max(width, height), 2));
+            _texture = new Texture(TextureTarget.Texture2D, width, height, SizedInternalFormat.Rgba8);
+            _texture.SetPixels(pixels, PixelFormat.Rgba, PixelType.UnsignedByte);
 
-            GL.CreateTextures(TextureTarget.Texture2D, 1, out _texture);
-            //GL.BindTexture(TextureTarget.Texture2D, _texture);
-            GL.TextureStorage2D(_texture, MipmapLevels, SizedInternalFormat.Rgba8, width, height);
-
-            GL.TextureSubImage2D(_texture, 0, 0, 0, width, height, PixelFormat.Rgba, PixelType.UnsignedByte, pixels);
-
-            GL.TextureParameter(_texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-            GL.TextureParameter(_texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
-
-            GL.TextureParameter(_texture, TextureParameterName.TextureMaxLevel, MipmapLevels - 1);
-
-            GL.TextureParameter(_texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            GL.TextureParameter(_texture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            //GL.BindTexture(TextureTarget.Texture2D, 0);
-
-            io.Fonts.SetTexID((IntPtr)_texture);
+            io.Fonts.SetTexID((IntPtr)_texture.ID);
 
             io.Fonts.ClearTexData();
         }
@@ -312,9 +259,6 @@ namespace Monorail.ImGUI
 
         private void RenderImDrawData(ImDrawDataPtr draw_data)
         {
-            //uint vertexOffsetInVertices = 0;
-            //uint indexOffsetInElements = 0;
-
             if (draw_data.CmdListsCount == 0)
             {
                 return;
@@ -328,7 +272,7 @@ namespace Monorail.ImGUI
                 if (vertexSize > _vertexBufferSize)
                 {
                     int newSize = (int)Math.Max(_vertexBufferSize * 1.5f, vertexSize);
-                    GL.NamedBufferData(_vertexBuffer, newSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
+                    _vao.VertexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _vertexBufferSize = newSize;
 
                     Log.Core.Info($"Resized dear imgui vertex buffer to new size {_vertexBufferSize}");
@@ -338,7 +282,7 @@ namespace Monorail.ImGUI
                 if (indexSize > _indexBufferSize)
                 {
                     int newSize = (int)Math.Max(_indexBufferSize * 1.5f, indexSize);
-                    GL.NamedBufferData(_indexBuffer, newSize, IntPtr.Zero, BufferUsageHint.DynamicDraw);
+                    _vao.IndexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _indexBufferSize = newSize;
 
                     Log.Core.Info($"Resized dear imgui index buffer to new size {_indexBufferSize}");
@@ -353,17 +297,9 @@ namespace Monorail.ImGUI
                 0.0f, -1.0f, 1.0f
             );
 
-            GL.UseProgram(_shaderProgram);
-
-            var loc = GL.GetUniformLocation(_shaderProgram, "projection_matrix");
-            if (loc < 0) Log.Core.Error("Uniform 'projection_matrix' not found.");
-            GL.UniformMatrix4(loc, false, ref mvp);
-
-            loc = GL.GetUniformLocation(_shaderProgram, "in_fontTexture");
-            if (loc < 0) Log.Core.Error("Uniform 'in_fontTexture' not found.");
-            GL.Uniform1(loc, 0);
-
-            GL.BindVertexArray(_vertexArray);
+            _shaderProgram.SetUniformMat4("projection_matrix", false, ref mvp);
+            _shaderProgram.Bind();
+            _vao.Bind();
 
             draw_data.ScaleClipRects(io.DisplayFramebufferScale);
 
@@ -379,9 +315,9 @@ namespace Monorail.ImGUI
             {
                 ImDrawListPtr cmd_list = draw_data.CmdListsRange[n];
 
-                GL.NamedBufferSubData(_vertexBuffer, IntPtr.Zero, cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
+                _vao.VertexBuffer.SetSubData(IntPtr.Zero, cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
 
-                GL.NamedBufferSubData(_indexBuffer, IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort), cmd_list.IdxBuffer.Data);
+                _vao.IndexBuffer.SetSubData(IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort), cmd_list.IdxBuffer.Data);
 
                 int vtx_offset = 0;
                 int idx_offset = 0;
@@ -395,8 +331,7 @@ namespace Monorail.ImGUI
                     }
                     else
                     {
-                        GL.ActiveTexture(TextureUnit.Texture0);
-                        GL.BindTexture(TextureTarget.Texture2D, (int)pcmd.TextureId);
+                        _texture.Bind(TextureUnit.Texture0);
 
                         // We do _windowHeight - (int)clip.W instead of (int)clip.Y because gl has flipped Y when it comes to these coordinates
                         var clip = pcmd.ClipRect;
@@ -417,22 +352,17 @@ namespace Monorail.ImGUI
                 vtx_offset += cmd_list.VtxBuffer.Size;
             }
 
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, 0);
+            _texture.Unbind(TextureUnit.Texture0);
 
             GL.Disable(EnableCap.Blend);
             GL.Disable(EnableCap.ScissorTest);
-
-            GL.BindVertexArray(0);
         }
 
-        /// <summary>
-        /// Frees all graphics resources used by the renderer.
-        /// </summary>
         public void Dispose()
         {
-            GL.DeleteProgram(_shaderProgram);
-            GL.DeleteTexture(_texture);
+            _vao.Dispose();
+            _texture.Dispose();
+            _shaderProgram.Dispose();
         }
     }
 }
