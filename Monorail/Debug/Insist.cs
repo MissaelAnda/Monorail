@@ -127,7 +127,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertEq(object first, object second)
 		{
-			if (first == second)
+			if (first != second)
 				Fail();
 		}
 
@@ -143,7 +143,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertNotEq(object first, object second)
 		{
-			if (first != second)
+			if (first == second)
 				Fail();
 		}
 
@@ -159,7 +159,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertEq(object first, object second, string message, params object[] args)
 		{
-			if (first == second)
+			if (first != second)
 				Fail(message, args);
 		}
 
@@ -175,7 +175,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertNotEq(object first, object second, string message, params object[] args)
 		{
-			if (first != second)
+			if (first == second)
 				Fail(message, args);
 		}
 	}
