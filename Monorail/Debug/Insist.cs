@@ -27,9 +27,7 @@ namespace Monorail.Debug
 		public static void Assert(bool condition)
 		{
 			if (!condition)
-			{
 				Fail();
-			}
 		}
 
 
@@ -38,9 +36,7 @@ namespace Monorail.Debug
 		public static void Assert(bool condition, string message, params object[] args)
 		{
 			if (!condition)
-			{
 				Fail(message, args);
-			}
 		}
 
 
@@ -127,8 +123,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertEq(object first, object second)
 		{
-			if (first != second)
-				Fail();
+			Assert(first.Equals(second));
 		}
 
 
@@ -143,8 +138,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertNotEq(object first, object second)
 		{
-			if (first == second)
-				Fail();
+			Assert(!first.Equals(second));
 		}
 
 
@@ -159,8 +153,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertEq(object first, object second, string message, params object[] args)
 		{
-			if (first != second)
-				Fail(message, args);
+			Assert(first.Equals(second), message, args);
 		}
 
 
@@ -175,8 +168,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void AssertNotEq(object first, object second, string message, params object[] args)
 		{
-			if (first == second)
-				Fail(message, args);
+			Assert(!first.Equals(second), message, args);
 		}
 	}
 }

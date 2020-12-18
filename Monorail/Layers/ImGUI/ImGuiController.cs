@@ -48,7 +48,7 @@ namespace Monorail.Layers.ImGUI
         private int _vertexBufferSize;
         private int _indexBufferSize;
         private ShaderProgram _shaderProgram;
-        private Texture _texture;
+        private Texture2D _texture;
 
         private int _windowWidth;
         private int _windowHeight;
@@ -139,8 +139,13 @@ namespace Monorail.Layers.ImGUI
             ImGuiIOPtr io = ImGui.GetIO();
             io.Fonts.GetTexDataAsRGBA32(out IntPtr pixels, out int width, out int height, out int _);
 
-            _texture = new Texture(TextureTarget.Texture2D, width, height, SizedInternalFormat.Rgba8);
-            _texture.SetPixels(pixels, PixelFormat.Rgba, PixelType.UnsignedByte);
+            var textureBuilder = new TextureBuilder()
+            {
+                InternalFormat = PixelInternalFormat.Srgb8Alpha8,
+                PixelFormat = PixelFormat.Bgra
+            };
+            _texture = new Texture2D(width, height, textureBuilder);
+            _texture.SetPixels(pixels, PixelFormat.Bgra, PixelType.UnsignedByte);
 
             io.Fonts.SetTexID((IntPtr)_texture.ID);
 
@@ -310,6 +315,7 @@ namespace Monorail.Layers.ImGUI
             GL.Disable(EnableCap.CullFace);
             GL.Disable(EnableCap.DepthTest);
 
+            var oldTexture = Texture2D.BindedTextures[0];
             // Render command lists
             for (int n = 0; n < draw_data.CmdListsCount; n++)
             {
@@ -331,7 +337,8 @@ namespace Monorail.Layers.ImGUI
                     }
                     else
                     {
-                        _texture.Bind(TextureUnit.Texture0);
+                        GL.ActiveTexture(TextureUnit.Texture0);
+                        GL.BindTexture(TextureTarget.Texture2D, (int)pcmd.TextureId);
 
                         // We do _windowHeight - (int)clip.W instead of (int)clip.Y because gl has flipped Y when it comes to these coordinates
                         var clip = pcmd.ClipRect;
@@ -352,7 +359,8 @@ namespace Monorail.Layers.ImGUI
                 vtx_offset += cmd_list.VtxBuffer.Size;
             }
 
-            _texture.Unbind(TextureUnit.Texture0);
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, oldTexture);
 
             GL.Disable(EnableCap.Blend);
             GL.Disable(EnableCap.ScissorTest);

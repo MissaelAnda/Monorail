@@ -16,10 +16,29 @@ namespace Monorail.Renderer
     }
 
 
-    public class Texture : OpenGLResource
+    public class TextureBuilder
+    {
+        public bool GenerateMipmaps = false;
+        public PixelInternalFormat InternalFormat = PixelInternalFormat.Rgba8;
+        public PixelFormat PixelFormat = PixelFormat.Rgba;
+        public PixelType PixelType = PixelType.UnsignedByte;
+
+        public TextureWrapMode WrapR = TextureWrapMode.Repeat;
+        public TextureWrapMode WrapS = TextureWrapMode.Repeat;
+        public TextureWrapMode WrapT = TextureWrapMode.Repeat;
+
+        public TextureMagFilter MagFilter = TextureMagFilter.Linear;
+        public TextureMinFilter MinFilter = TextureMinFilter.Linear;
+
+        public Color4 BorderColor = Color4.White;
+    }
+
+
+    public class Texture2D : OpenGLResource
     {
         public const int MAX_TEXTURE_POSITIONS = 32;
         public const SizedInternalFormat SRGB8ALPHA8 = (SizedInternalFormat)All.Srgb8Alpha8;
+        public const TextureTarget TARGET = TextureTarget.Texture2D;
 
         public static int[] BindedTextures { get; private set; } = new int[MAX_TEXTURE_POSITIONS];
 
@@ -27,19 +46,27 @@ namespace Monorail.Renderer
 
         public static readonly float MaxAnisotropic;
 
-        static Texture()
+        static Texture2D()
         {
             MaxAnisotropic = GL.GetFloat(MAX_TEXTURE_MAX_ANISOTROPIC);
         }
 
-
-        public readonly TextureTarget Target;
-        public readonly int Width;
-        public readonly int Height;
         public readonly int MipmapLevels;
-        public readonly SizedInternalFormat InternalFormat;
+
 
         #region getters and setters
+
+        public int Width
+        {
+            get => _width;
+            set => SetWidth(value);
+        }
+
+        public int Height
+        {
+            get => _height;
+            set => SetHeight(value);
+        }
 
         public TextureWrapMode WrapR
         {
@@ -77,22 +104,34 @@ namespace Monorail.Renderer
             set => SetAnisotropic(value);
         }
 
+        public Color4 BorderColor
+        {
+            get => _borderColor;
+            set => SetBorderColor(value);
+        }
+
         #endregion
 
 
         int _bindedPositions = 0;
         float _anisotropic = 0f;
 
-        TextureWrapMode _wrapR = TextureWrapMode.Repeat;
-        TextureWrapMode _wrapS = TextureWrapMode.Repeat;
-        TextureWrapMode _wrapT = TextureWrapMode.Repeat;
+        TextureWrapMode _wrapR;
+        TextureWrapMode _wrapS;
+        TextureWrapMode _wrapT;
 
-        TextureMagFilter _magFilter = TextureMagFilter.Linear;
-        TextureMinFilter _minFilter = TextureMinFilter.LinearMipmapLinear;
+        TextureMagFilter _magFilter;
+        TextureMinFilter _minFilter;
 
-        Color4 _borderColor = Color4.Black;
+        int _width, _height;
 
-        public static Texture FromPath(string path, TextureTarget target, SizedInternalFormat? internalFormat = null, bool generateMipmaps = false)
+        Color4 _borderColor;
+
+        PixelInternalFormat _internalFormat;
+        PixelFormat _pixelFormat;
+        PixelType _pixelType;
+
+        public static Texture2D FromPath(string path, TextureBuilder builder)
         {
             Bitmap image;
             try { image = new Bitmap(path); }
@@ -102,70 +141,99 @@ namespace Monorail.Renderer
                 throw e;
             }
 
-            return new Texture(image, target, internalFormat, generateMipmaps);
+            return Texture2D.FromBitmap(image, builder);
         }
 
-        public Texture(Bitmap image, TextureTarget target, SizedInternalFormat? internalFormat = null, bool generateMipmaps = false) :
-            this(target, image.Width, image.Height, internalFormat, generateMipmaps)
+        public static Texture2D FromBitmap(Bitmap image, TextureBuilder builder)
         {
-            System.Drawing.Imaging.BitmapData data = image.LockBits(new Rectangle(0, 0, Width, Height),
+            var texture = new Texture2D(image.Width, image.Height, builder);
+
+            var data = image.LockBits(new Rectangle(0, 0, image.Width, image.Height),
                 System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-
-            SetPixels(data.Scan0, PixelFormat.Bgra, PixelType.UnsignedByte);
-
+            texture.SetPixels(data.Scan0);
             image.UnlockBits(data);
+
+            return texture;
         }
 
-        public Texture(TextureTarget target, int width, int height, SizedInternalFormat? internalFormat = null, bool generateMipmaps = false)
+        public Texture2D(int width, int height, TextureBuilder builder)
         {
-            Target = target;
-            Width = width;
-            Height = height;
+            Insist.Assert(width > 0);
+            Insist.Assert(height > 0);
+            _width = width;
+            _height = height;
+            _internalFormat = builder.InternalFormat;
+            _pixelFormat = builder.PixelFormat;
+            _pixelType = builder.PixelType;
 
-            GL.CreateTextures(target, 1, out _id);
+            GL.CreateTextures(TARGET, 1, out _id);
             if (_id <= 0)
                 throw new OpenGLResourceCreationException(ResourceType.Texture);
 
-            InternalFormat = internalFormat.HasValue ? internalFormat.Value : SRGB8ALPHA8;
-
-            if (generateMipmaps)
+            if (builder.GenerateMipmaps)
                 MipmapLevels = (int)Math.Floor(Math.Log(Math.Max(width, height), 2));
-            else
-                MipmapLevels = 1;
+            else MipmapLevels = 1;
 
-            GL.TextureStorage2D(_id, MipmapLevels, InternalFormat, width, height);
+            var old = BindedTextures[0];
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TARGET, _id);
+            GL.TexImage2D(TARGET, 0, _internalFormat, _width, _height, 0, _pixelFormat, _pixelType, (IntPtr)null);
+            GL.BindTexture(TARGET, old);
+
             GL.TextureParameter(_id, TextureParameterName.TextureMaxLevel, MipmapLevels - 1);
 
-            SetDefaults();
+            SetDefaults(builder);
         }
 
-        public void SetPixels(IntPtr pixels, PixelFormat format, PixelType type)
+        public void SetPixels(IntPtr pixels, PixelFormat? pixelFormat = null, PixelType? pixelType = null)
         {
-            GL.TextureSubImage2D(_id, 0, 0, 0, Width, Height, format, type, pixels);
+            if (pixelFormat.HasValue) _pixelFormat = pixelFormat.Value;
+            if (pixelType.HasValue) _pixelType = pixelType.Value;
+
+            GL.TextureSubImage2D(_id, 0, 0, 0, Width, Height, _pixelFormat, _pixelType, pixels);
 
             if (MipmapLevels > 1) GL.GenerateTextureMipmap(_id);
         }
 
-        public void SetPixelsRectangle(IntPtr pixels, PixelFormat format, PixelType type, Rectangle target)
+        public void SetPixelsRectangle(IntPtr pixels, Rectangle target, PixelFormat? pixelFormat = null, PixelType? pixelType = null)
         {
             Insist.Assert(target.X > 0);
             Insist.Assert(target.Y > 0);
             Insist.Assert(target.Width <= Width);
             Insist.Assert(target.Height <= Height);
 
+            var format = pixelFormat.HasValue ? pixelFormat.Value : _pixelFormat;
+            var type = pixelType.HasValue ? pixelType.Value : _pixelType;
+
             GL.TextureSubImage2D(_id, 0, target.X, target.Y, target.Width, target.Height, format, type, pixels);
 
             if (MipmapLevels > 1) GL.GenerateTextureMipmap(_id);
         }
 
-        void SetDefaults()
+        public void Resize(int width, int height)
         {
-            WrapR = TextureWrapMode.Repeat;
-            WrapS = TextureWrapMode.Repeat;
-            WrapT = TextureWrapMode.Repeat;
+            Insist.Assert(width > 0);
+            Insist.Assert(height > 0);
+            _width = width;
+            _height = height;
 
-            MagFilter = TextureMagFilter.Linear;
-            MinFilter = TextureMinFilter.Linear;
+            var old = BindedTextures[0];
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TARGET, _id);
+            GL.TexImage2D(TARGET, 0, PixelInternalFormat.Rgba8, _width, _height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (IntPtr)null);
+            GL.BindTexture(TARGET, old);
+        }
+
+        void SetDefaults(TextureBuilder builder)
+        {
+            WrapR = builder.WrapR;
+            WrapS = builder.WrapS;
+            WrapT = builder.WrapT;
+
+            MagFilter = builder.MagFilter;
+            MinFilter = builder.MinFilter;
+
+            BorderColor = builder.BorderColor;
         }
 
 
@@ -201,8 +269,8 @@ namespace Monorail.Renderer
             BindedTextures[pos] = id;
             Flags.SetBit(ref _bindedPositions, pos, binded);
 
-            GL.ActiveTexture(TextureUnit.Texture0 + pos);
-            GL.BindTexture(TextureTarget.Texture2D, id);
+            GL.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + pos));
+            GL.BindTexture(TARGET, id);
         }
 
         #endregion
@@ -210,7 +278,7 @@ namespace Monorail.Renderer
 
         #region Fluent Setters
 
-        public Texture SetWrapMode(TextureCoordinate coord, TextureWrapMode mode)
+        public Texture2D SetWrapMode(TextureCoordinate coord, TextureWrapMode mode)
         {
             switch (coord)
             {
@@ -229,13 +297,14 @@ namespace Monorail.Renderer
             return this;
         }
 
-        public Texture SetMagFilter(TextureMagFilter filter)
+        public Texture2D SetMagFilter(TextureMagFilter filter)
         {
+            _magFilter = filter;
             GL.TextureParameter(_id, TextureParameterName.TextureMagFilter, (int)filter);
             return this;
         }
 
-        public Texture SetMinFilter(TextureMinFilter filter)
+        public Texture2D SetMinFilter(TextureMinFilter filter)
         {
             if (MipmapLevels > 1)
             {
@@ -245,11 +314,12 @@ namespace Monorail.Renderer
                     filter = TextureMinFilter.NearestMipmapNearest;
             }
 
+            _minFilter = filter;
             GL.TextureParameter(_id, TextureParameterName.TextureMinFilter, (int)filter);
             return this;
         }
 
-        public Texture SetAnisotropic(float level)
+        public Texture2D SetAnisotropic(float level)
         {
             const TextureParameterName TEXTURE_MAX_ANISOTROPIC = (TextureParameterName)0x84FE;
             _anisotropic = MathHelper.Clamp(level, 1, MaxAnisotropic);
@@ -257,11 +327,30 @@ namespace Monorail.Renderer
             return this;
         }
 
-        public Texture SetLod(int @base, int min, int max)
+        public Texture2D SetLod(int @base, int min, int max)
         {
             GL.TextureParameter(_id, TextureParameterName.TextureLodBias, @base);
             GL.TextureParameter(_id, TextureParameterName.TextureMinLod, min);
             GL.TextureParameter(_id, TextureParameterName.TextureMaxLod, max);
+            return this;
+        }
+
+        public Texture2D SetBorderColor(Color4 color)
+        {
+            _borderColor = color;
+            GL.TextureParameter(_id, TextureParameterName.TextureBorderColor, color.ToArray());
+            return this;
+        }
+
+        public Texture2D SetWidth(int width)
+        {
+            Resize(width, _height);
+            return this;
+        }
+
+        public Texture2D SetHeight(int height)
+        {
+            Resize(_width, height);
             return this;
         }
 
@@ -278,5 +367,8 @@ namespace Monorail.Renderer
                 base.Dispose();
             }
         }
+
+
+        public static implicit operator IntPtr(Texture2D tex) => (IntPtr)tex.ID;
     }
 }

@@ -7,6 +7,7 @@ using Monorail.Layers;
 using System.Runtime.InteropServices;
 using System;
 using Monorail.Renderer;
+using Monorail.Layers.ImGUI;
 
 namespace Monorail
 {
@@ -16,8 +17,8 @@ namespace Monorail
         Layer imguiLayer;
         Color4 ClearColor = Color4.DarkGray;
 
-        ShaderProgram shaderProgram;
-        VertexArray _vao;
+        ShaderProgram shaderProgram, shaderUV;
+        VertexArray _vao, _vaoQuad;
         public static Framebuffer Framebuffer;
 
         public static int Width { get; protected set; }
@@ -33,6 +34,19 @@ namespace Monorail
         uint[] IndexData =
         {
             0, 1, 2
+        };
+
+        float[] VertexDataUV =
+        {
+            -1.0f, -1.0f, 0.0f, 0.0f,
+            -1.0f,  1.0f, 0.0f, 1.0f,
+             1.0f,  1.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 1.0f, 0.0f,
+        };
+
+        uint[] IndexDataUV =
+        {
+            0, 1, 2, 2, 3, 0
         };
 
         string VertexShader = @"
@@ -57,6 +71,33 @@ namespace Monorail
             void main()
             {
                 FragColor = vec4(Color, 0.5);
+            }";
+
+
+        string VertexShaderUV = @"
+            #version 330 core
+            layout (location = 0) in vec2 aPosition;
+            layout (location = 1) in vec2 aUV;
+
+            out vec2 UV;
+
+            void main()
+            {
+                UV = aUV;
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }";
+
+        string FragmentShaderUV = @"
+            #version 330 core
+            out vec4 FragColor;
+
+            in vec2 UV;
+
+            uniform sampler2D tex;
+
+            void main()
+            {
+                FragColor = texture(tex, UV);
             }";
 
         DebugProc _debugCallback;
@@ -116,7 +157,12 @@ namespace Monorail
             layout.AddAttrib(new VertexAttrib("aPosition", VertexAttribDataType.Float2))
                 .AddAttrib(new VertexAttrib("aColor", VertexAttribDataType.Float3));
 
+            var uvLayout = new VertexLayout();
+            uvLayout.AddAttrib(new VertexAttrib("aPosition", VertexAttribDataType.Float2))
+                .AddAttrib(new VertexAttrib("aUV", VertexAttribDataType.Float2));
+
             VertexArray.AddVertexLayout("Simple2D", layout);
+            VertexArray.AddVertexLayout("Quad", uvLayout);
 
             var vertexBuffer = new VertexBuffer();
             vertexBuffer.SetData(VertexData, BufferUsageHint.StaticDraw);
@@ -125,6 +171,14 @@ namespace Monorail
             indexBuffer.SetData(IndexData, BufferUsageHint.StaticDraw);
 
             _vao = new VertexArray("Simple2D", vertexBuffer, indexBuffer);
+
+            vertexBuffer = new VertexBuffer();
+            vertexBuffer.SetData(VertexDataUV, BufferUsageHint.StaticDraw);
+
+            indexBuffer = new IndexBuffer();
+            indexBuffer.SetData(IndexDataUV, BufferUsageHint.StaticDraw);
+
+            _vaoQuad = new VertexArray("Quad", vertexBuffer, indexBuffer);
 
             var vertex = Shader.FromSource(VertexShader, ShaderType.VertexShader);
             var fragment = Shader.FromSource(FragmentShader, ShaderType.FragmentShader);
@@ -140,6 +194,19 @@ namespace Monorail
 
             vertex.Dispose();
             fragment.Dispose();
+
+            vertex = Shader.FromSource(VertexShaderUV, ShaderType.VertexShader);
+            fragment = Shader.FromSource(FragmentShaderUV, ShaderType.FragmentShader);
+
+            shaderUV = new ShaderProgram();
+            shaderUV.AttachShader(vertex);
+            shaderUV.AttachShader(fragment);
+            shaderUV.LinkProgram();
+            shaderUV.DetachAllShaders();
+
+            vertex.Dispose();
+            fragment.Dispose();
+            shaderUV.SetUniform1("tex", 0);
 
             // Create framebuffer
             Framebuffer = new Framebuffer(800, 600, FramebufferAttachements.All);
@@ -159,9 +226,10 @@ namespace Monorail
 
         protected override void OnRenderFrame(FrameEventArgs args)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
             Framebuffer.Bind();
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
             shaderProgram.Bind();
             _vao.Draw();
             Framebuffer.Unbind();

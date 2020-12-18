@@ -9,13 +9,7 @@ namespace Monorail
         {
             using (App game = new App())
             {
-                try
-                {
-                    game.Run();
-                } catch(Exception e)
-                {
-                    Log.Core.Error(e.ToString());
-                }
+                game.Run();
             }
         }
     }

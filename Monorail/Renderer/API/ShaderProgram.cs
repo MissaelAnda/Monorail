@@ -45,9 +45,12 @@ namespace Monorail.Renderer
         public void LinkProgram()
         {
             GL.LinkProgram(_id);
-            ErrorCode error = GL.GetError();
-            if (error != ErrorCode.NoError)
-                throw new OpenGLException(error);
+            GL.GetProgram(_id, GetProgramParameterName.LinkStatus, out int success);
+            if (success == 0)
+            {
+                GL.GetProgramInfoLog(_id, out var log);
+                Insist.Fail(log);
+            }
         }
 
         public Shader GetShader(ShaderType type) => _shaders[GetShaderPosition(type)];

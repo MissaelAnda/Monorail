@@ -1,6 +1,8 @@
 ﻿using System;
 using ImGuiNET;
 using System.Numerics;
+using OpenTK.Graphics.OpenGL4;
+using Monorail.Renderer;
 
 namespace Monorail.Layers.ImGUI
 {
@@ -14,9 +16,11 @@ namespace Monorail.Layers.ImGUI
 
             //ImGui.ShowStyleEditor();
 
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0, 0));
             ImGui.Begin("View");
-            ImGui.Image((IntPtr)App.Framebuffer.Color, new Vector2(800, 600), new Vector2(0f, 1f), new Vector2(1, 0));
+            ImGui.Image(App.Framebuffer.Color, ImGui.GetWindowSize(), new Vector2(0, 1), new Vector2(1, 0));
             ImGui.End();
+            ImGui.PopStyleVar();
         }
 
         public static void SetupStyle()
@@ -56,7 +60,7 @@ namespace Monorail.Layers.ImGUI
             // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
             // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0.0f, 0.0f));
-            ImGui.Begin("DockSpace Demo", window_flags);
+            ImGui.Begin("EditorDockspace", window_flags);
 
             // Pop padding style
             ImGui.PopStyleVar();
