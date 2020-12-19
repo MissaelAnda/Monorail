@@ -1,10 +1,10 @@
 ﻿using System;
 using Monorail.Util;
-using OpenTK.Graphics.OpenGL4;
-using System.Runtime.CompilerServices;
-using OpenTK.Mathematics;
 using System.Drawing;
 using Monorail.Debug;
+using OpenTK.Mathematics;
+using OpenTK.Graphics.OpenGL4;
+using System.Runtime.CompilerServices;
 
 namespace Monorail.Renderer
 {
@@ -370,5 +370,7 @@ namespace Monorail.Renderer
 
 
         public static implicit operator IntPtr(Texture2D tex) => (IntPtr)tex.ID;
+
+        public static implicit operator int(Texture2D tex) => tex.ID;
     }
 }

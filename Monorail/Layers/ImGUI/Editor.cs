@@ -1,26 +1,47 @@
-﻿using System;
-using ImGuiNET;
-using System.Numerics;
-using OpenTK.Graphics.OpenGL4;
-using Monorail.Renderer;
+﻿using ImGuiNET;
+using Monorail.Util;
+using OpenTK.Mathematics;
+using ImVec2 = System.Numerics.Vector2;
 
 namespace Monorail.Layers.ImGUI
 {
     public static class Editor
     {
-        public static void Start()
-        {
-            SetupStyle();
+        public static Vector2 Viewport { get; private set; } = Vector2.Zero;
+        public static string text = "";
 
-            StartDockspace();
+        public static void Process()
+        {
+            Dockspace();
 
             //ImGui.ShowStyleEditor();
 
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0, 0));
-            ImGui.Begin("View");
-            ImGui.Image(App.Framebuffer.Color, ImGui.GetWindowSize(), new Vector2(0, 1), new Vector2(1, 0));
+            // Hierarchy
+            ImGui.Begin("Hierarchy");
+            ImGui.Text("Hello world");
+            ImGui.End();
+
+            // GameWindow
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new ImVec2(0, 0));
+            ImGui.Begin("World Viewport");
+            var viewPort = ImGui.GetContentRegionAvail();
+            Viewport = viewPort.ToVector2();
+            ImGui.Image(App.Framebuffer.Color, viewPort, new ImVec2(0, 1), new ImVec2(1, 0));
             ImGui.End();
             ImGui.PopStyleVar();
+            
+
+            // WorldEditor
+
+
+            // Properties
+
+
+            // Resource manager (File explorer)
+
+
+            // Console
+
         }
 
         public static void SetupStyle()
@@ -34,7 +55,7 @@ namespace Monorail.Layers.ImGUI
             style.TabRounding = 0;
         }
 
-        public static void StartDockspace()
+        public static void Dockspace()
         {
             ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags.None;
 
@@ -59,7 +80,7 @@ namespace Monorail.Layers.ImGUI
             // all active windows docked into it will lose their parent and become undocked.
             // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
             // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0.0f, 0.0f));
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new ImVec2(0.0f, 0.0f));
             ImGui.Begin("EditorDockspace", window_flags);
 
             // Pop padding style
@@ -70,7 +91,7 @@ namespace Monorail.Layers.ImGUI
 
             // DockSpace
             uint dockspace_id = ImGui.GetID("EditorDockspace");
-            ImGui.DockSpace(dockspace_id, new Vector2(0.0f, 0.0f), dockspace_flags);
+            ImGui.DockSpace(dockspace_id, new ImVec2(0.0f, 0.0f), dockspace_flags);
 
             StartMenuBar();
 

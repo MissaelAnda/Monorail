@@ -1,13 +1,13 @@
-﻿using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
+﻿using System;
 using Monorail.Debug;
-using OpenTK.Graphics.OpenGL4;
-using OpenTK.Mathematics;
 using Monorail.Layers;
-using System.Runtime.InteropServices;
-using System;
 using Monorail.Renderer;
+using OpenTK.Mathematics;
 using Monorail.Layers.ImGUI;
+using OpenTK.Graphics.OpenGL4;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
+using System.Runtime.InteropServices;
 
 namespace Monorail
 {
@@ -15,7 +15,7 @@ namespace Monorail
     {
         LayerStack layerStack;
         Layer imguiLayer;
-        Color4 ClearColor = Color4.DarkGray;
+        Color4 ClearColor = Color4.CornflowerBlue;
 
         ShaderProgram shaderProgram, shaderUV;
         VertexArray _vao, _vaoQuad;
@@ -210,13 +210,15 @@ namespace Monorail
 
             // Create framebuffer
             Framebuffer = new Framebuffer(800, 600, FramebufferAttachements.All);
-
-            GL.ClearColor(new Color4(0.1f, 0.1f, 0.1f, 1.0f));
         }
 
         protected void OnUpdate(FrameEventArgs args)
         {
             layerStack.Update(args.Time);
+
+            // Should be processed in the 
+            if (Framebuffer.Size != Editor.Viewport)
+                Framebuffer.Resize((int)Editor.Viewport.X, (int)Editor.Viewport.Y);
         }
 
         protected override void OnRenderThreadStarted()
@@ -226,9 +228,11 @@ namespace Monorail
 
         protected override void OnRenderFrame(FrameEventArgs args)
         {
+            GL.ClearColor(new Color4(0.1f, 0.1f, 0.1f, 1.0f));
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
             Framebuffer.Bind();
+            GL.ClearColor(ClearColor);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
             shaderProgram.Bind();
             _vao.Draw();
