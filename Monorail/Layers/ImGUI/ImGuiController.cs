@@ -1,13 +1,13 @@
 ﻿using System;
 using ImGuiNET;
+using Monorail.Debug;
+using Monorail.Renderer;
+using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Windowing.Desktop;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using OpenTK.Windowing.Desktop;
-using Monorail.Debug;
-using OpenTK.Mathematics;
-using Monorail.Renderer;
 
 namespace Monorail.Layers.ImGUI
 {
@@ -97,9 +97,12 @@ namespace Monorail.Layers.ImGUI
             _indexBufferSize = 2000;
             
             var vertexBuffer = new VertexBuffer();
+            vertexBuffer.SetElementSize(Unsafe.SizeOf<ImDrawVert>());
             vertexBuffer.AllocateEmpty(_vertexBufferSize, BufferUsageHint.DynamicDraw);
 
             var indexBuffer = new IndexBuffer();
+            indexBuffer.SetElementSize(sizeof(ushort));
+            indexBuffer.ElementsType = DrawElementsType.UnsignedShort;
             indexBuffer.AllocateEmpty(_indexBufferSize, BufferUsageHint.DynamicDraw);
 
             var imguiVertexLayout = new VertexLayout();
@@ -273,20 +276,18 @@ namespace Monorail.Layers.ImGUI
             {
                 ImDrawListPtr cmd_list = draw_data.CmdListsRange[i];
 
-                int vertexSize = cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>();
-                if (vertexSize > _vertexBufferSize)
+                if (cmd_list.VtxBuffer.Size > _vao.VertexBuffer.DataLength)
                 {
-                    int newSize = (int)Math.Max(_vertexBufferSize * 1.5f, vertexSize);
+                    int newSize = (int)Math.Max(_vertexBufferSize * 1.5f, cmd_list.VtxBuffer.Size);
                     _vao.VertexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _vertexBufferSize = newSize;
 
                     Log.Core.Info($"Resized dear imgui vertex buffer to new size {_vertexBufferSize}");
                 }
 
-                int indexSize = cmd_list.IdxBuffer.Size * sizeof(ushort);
-                if (indexSize > _indexBufferSize)
+                if (cmd_list.IdxBuffer.Size > _vao.IndexBuffer.DataLength)
                 {
-                    int newSize = (int)Math.Max(_indexBufferSize * 1.5f, indexSize);
+                    int newSize = (int)Math.Max(_indexBufferSize * 1.5f, cmd_list.IdxBuffer.Size);
                     _vao.IndexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _indexBufferSize = newSize;
 
@@ -321,9 +322,9 @@ namespace Monorail.Layers.ImGUI
             {
                 ImDrawListPtr cmd_list = draw_data.CmdListsRange[n];
 
-                _vao.VertexBuffer.SetSubData(IntPtr.Zero, cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
+                _vao.VertexBuffer.SetSubData(cmd_list.VtxBuffer.Size, cmd_list.VtxBuffer.Data);
 
-                _vao.IndexBuffer.SetSubData(IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort), cmd_list.IdxBuffer.Data);
+                _vao.IndexBuffer.SetSubData(cmd_list.IdxBuffer.Size, cmd_list.IdxBuffer.Data);
 
                 int vtx_offset = 0;
                 int idx_offset = 0;

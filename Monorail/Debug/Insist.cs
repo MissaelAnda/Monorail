@@ -8,7 +8,7 @@ namespace Monorail.Debug
 		[DebuggerHidden]
 		public static void Fail()
 		{
-			Log.Core.Error("Intentional fail called.");
+			Log.Core.Error("Assertion failed.");
 			Debugger.Break();
 		}
 

@@ -197,7 +197,7 @@ namespace Monorail.Renderer
             if(CurrentlyBinded != _id)
             {
                 GL.BindFramebuffer(Target, _id);
-                GL.Viewport(0, 0, _width, _height);
+                RenderCommand.SetViewport(0, 0, _width, _height);
                 CurrentlyBinded = _id;
             }
         }
@@ -207,7 +207,7 @@ namespace Monorail.Renderer
             if (CurrentlyBinded == _id)
             {
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-                GL.Viewport(0, 0, App.Width, App.Height);
+                RenderCommand.SetViewportSize(App.Width, App.Height);
                 CurrentlyBinded = 0;
             }
         }
@@ -217,7 +217,7 @@ namespace Monorail.Renderer
             if (CurrentlyBinded != 0)
             {
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-                GL.Viewport(0, 0, App.Width, App.Height);
+                RenderCommand.SetViewportSize(App.Width, App.Height);
                 CurrentlyBinded = 0;
             }
         }

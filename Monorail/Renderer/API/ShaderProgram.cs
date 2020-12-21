@@ -1,7 +1,7 @@
-﻿using Monorail.Debug;
-using OpenTK.Graphics.OpenGL4;
+﻿using System;
+using Monorail.Debug;
 using OpenTK.Mathematics;
-using System;
+using OpenTK.Graphics.OpenGL4;
 using System.Collections.Generic;
 
 namespace Monorail.Renderer
@@ -134,6 +134,11 @@ namespace Monorail.Renderer
         public void SetUniform1(string name, uint val) => GL.ProgramUniform1(_id, GetLocation(name), val);
         public void SetUniform1(string name, float val) => GL.ProgramUniform1(_id, GetLocation(name), val);
         public void SetUniform1(string name, double val) => GL.ProgramUniform1(_id, GetLocation(name), val);
+
+        public void SetUniform1(string name, int[] val) => GL.ProgramUniform1(_id, GetLocation(name), val.Length, val);
+        public void SetUniform1(string name, uint[] val) => GL.ProgramUniform1((uint)_id, GetLocation(name), val.Length, val);
+        public void SetUniform1(string name, float[] val) => GL.ProgramUniform1(_id, GetLocation(name), val.Length, val);
+        public void SetUniform1(string name, double[] val) => GL.ProgramUniform1(_id, GetLocation(name), val.Length, val);
 
         public void SetUniform2(string name, ref Vector2 val) => GL.ProgramUniform2(_id, GetLocation(name), ref val);
         public void SetUniform2(string name, ref Vector2i val) => GL.ProgramUniform2(_id, GetLocation(name), val);

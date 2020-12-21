@@ -1,6 +1,6 @@
-﻿using Monorail.Debug;
+﻿using System;
+using Monorail.Debug;
 using OpenTK.Graphics.OpenGL4;
-using System;
 using System.Collections.Generic;
 
 namespace Monorail.Renderer
@@ -316,16 +316,6 @@ namespace Monorail.Renderer
                 GL.BindVertexArray(0);
                 CurrentlyBinded = 0;
             }
-        }
-
-        public void Draw()
-        {
-            Bind();
-
-            if (IndexBuffer != null)
-                GL.DrawElements(BeginMode.Triangles, IndexBuffer.DataLength, IndexBuffer.ElementsType, 0);
-            else
-                GL.DrawArrays(PrimitiveType.Triangles, 0, VertexBuffer.DataLength);
         }
 
         public override void Dispose()

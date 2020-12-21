@@ -148,6 +148,8 @@ namespace Monorail.Renderer
         {
             var texture = new Texture2D(image.Width, image.Height, builder);
 
+            image.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
             var data = image.LockBits(new Rectangle(0, 0, image.Width, image.Height),
                 System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             texture.SetPixels(data.Scan0);
@@ -259,6 +261,30 @@ namespace Monorail.Renderer
             {
                 if (Flags.GetBit(_bindedPositions, i))
                     SetPosition(i, false);
+            }
+        }
+
+        public static void UnbindPosition(TextureUnit position)
+        {
+            int pos = position - TextureUnit.Texture0;
+            if (BindedTextures[pos] != 0)
+            {
+                GL.ActiveTexture(position);
+                GL.BindTexture(TARGET, 0);
+                BindedTextures[pos] = 0;
+            }
+        }
+
+        public static void UnbindAll()
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                if (BindedTextures[i] != 0)
+                {
+                    GL.ActiveTexture(TextureUnit.Texture0 + i);
+                    GL.BindTexture(TARGET, 0);
+                    BindedTextures[i] = 0;
+                }
             }
         }
 

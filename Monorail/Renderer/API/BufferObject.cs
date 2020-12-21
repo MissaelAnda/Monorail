@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using Monorail.Debug;
 using OpenTK.Graphics.OpenGL4;
+using System.Runtime.CompilerServices;
 
 namespace Monorail.Renderer
 {
@@ -20,6 +20,11 @@ namespace Monorail.Renderer
         /// The amount of items this buffers has
         /// </summary>
         public int DataLength { get; protected set; } = 0;
+
+        /// <summary>
+        /// The size in bytes of the currently use data
+        /// </summary>
+        public int ElementSize { get; protected set; } = 0;
 
         public BufferObject(BufferTarget target)
         {
@@ -40,17 +45,23 @@ namespace Monorail.Renderer
             GL.NamedBufferData(_id, DataSize, data, Usage);
         }
 
-        public virtual void SetSubData(IntPtr offset, int size, IntPtr data)
+        public virtual void SetElementSize(int size)
         {
-            GL.NamedBufferSubData(_id, offset, size, data);
+            ElementSize = size;
         }
 
-        public virtual void AllocateEmpty(int size, BufferUsageHint usage)
+        public virtual void SetSubData(int elements, IntPtr data, IntPtr? offset = null)
+        {
+            GL.NamedBufferSubData(_id, offset.HasValue ? offset.Value : IntPtr.Zero, elements * ElementSize, data);
+        }
+
+        public virtual void AllocateEmpty(int capacity, BufferUsageHint usage)
         {
             Usage = usage;
-            DataSize = size;
+            DataLength = capacity;
+            DataSize = capacity * ElementSize;
 
-            GL.NamedBufferData(_id, size, IntPtr.Zero, Usage);
+            GL.NamedBufferData(_id, DataSize, IntPtr.Zero, Usage);
         }
 
         public override void Dispose()

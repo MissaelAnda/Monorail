@@ -1,11 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Monorail.Util
 {
     public static class Flags
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool GetBit(int val, int pos)
+        public static bool GetBit(in int val, int pos)
         {
             return (val & (1 << pos)) != 0;
         }
