@@ -1,5 +1,6 @@
 ﻿using OpenTK.Mathematics;
 using System.Runtime.CompilerServices;
+using ImVec2 = System.Numerics.Vector2;
 using Matrix2D = OpenTK.Mathematics.Matrix3x2;
 
 namespace Monorail.Util
@@ -140,5 +141,8 @@ namespace Monorail.Util
 		{
 			return new Vector3(vec.X, vec.Y, 0);
 		}
+
+		public static ImVec2 ToImVec2(this Vector2 vec)
+			=> new ImVec2(vec.X, vec.Y);
 	}
 }

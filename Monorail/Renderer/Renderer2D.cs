@@ -3,6 +3,8 @@ using Monorail.Debug;
 using System.Drawing;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using Monorail.Util;
+using System.Runtime.CompilerServices;
 
 namespace Monorail.Renderer
 {
@@ -73,6 +75,12 @@ namespace Monorail.Renderer
 
         static Texture2D[] _textures = new Texture2D[32];
 
+        static Camera2D _camera;
+
+        static int _trianglesBatched = 0;
+
+        static int _trianglesCalled = 0;
+
         static Renderer2D()
         {
             var vertex = Shader.FromSource(VertexShader, ShaderType.VertexShader);
@@ -102,6 +110,7 @@ namespace Monorail.Renderer
         {
             Insist.AssertFalse(_begun, "Renderer has already begun.");
             _trianglesBatcher.Clear();
+            _camera = camera;
             _shader.SetUniformMat4("u_Projection", false, camera.ProjectionView);
             _begun = true;
         }
@@ -116,13 +125,29 @@ namespace Monorail.Renderer
         public static void DrawQuad(Transform2D transform, Color4[] color, Texture2D texture = null, RectangleF? source = null)
         {
             Insist.AssertEq(color.Length, 4, "4 vertex color required");
-            // TODO: Add per triangle frustrum culling
 
             float cos = (float)MathHelper.Cos(transform.Rotation);
             float sin = (float)MathHelper.Sin(transform.Rotation);
             var rotMat = new Matrix2(cos, -sin, sin, cos);
 
-            var uvPositions =  new Vector2[4];
+            var positions = new Vector2[4];
+            // Push the vertices to the batcher
+            for (int i = 0; i < 4; i++)
+            {
+                positions[i] = (rotMat * new Vector2(
+                    _vertexPositions[i].X * transform.Scale.X,
+                    _vertexPositions[i].Y * transform.Scale.Y
+                )) + transform.Position;
+            }
+
+            _trianglesCalled += 2;
+
+            // Check if quad is inside the camera bounds
+            if (!FrustumCullTest(new RectangleF(positions[0].X, positions[1].Y, positions[3].X - positions[0].X, positions[1].Y - positions[0].Y)))
+                return;
+
+            // Set the UV positions from texture source
+            var uvPositions = new Vector2[4];
             if (texture != null)
             {
                 // Bottom Left UV
@@ -171,26 +196,21 @@ namespace Monorail.Renderer
                 texPos = (byte)(internalPos + 1);
             }
 
-            // Push the vertices to the batcher
+            // Create the vertecies
+            var vertices = new Vertex2D[4];
             for (int i = 0; i < 4; i++)
-            {
-                var rotation = rotMat * new Vector2(
-                    _vertexPositions[i].X * transform.Scale.X,
-                    _vertexPositions[i].Y * transform.Scale.Y
-                );
+                vertices[i] = new Vertex2D(positions[i].ToVector3(), color[i], uvPositions[i], texPos);
 
-                _trianglesBatcher.PushVertices(new Vertex2D(
-                    new Vector3(rotation.X + transform.Position.X, rotation.Y + transform.Position.Y, 0),
-                    color[i], uvPositions[i], texPos
-                ));
-            }
+            // Batch them
+            _trianglesBatcher.PushVertices(vertices);
 
+            _trianglesBatched += 2;
             // Add the 2 triangles indices
             _trianglesBatcher.PushIndices(
                 _indexOffset, _indexOffset + 1, _indexOffset + 2, // Bottom left triangle
                 _indexOffset + 2, _indexOffset + 3, _indexOffset  // Top Right triangle
             );
-
+            // Two triangles moves the offset by 4
             _indexOffset += 4;
         }
 
@@ -199,6 +219,36 @@ namespace Monorail.Renderer
             Insist.Assert(_begun, "Renderer hasn't begun.");
             Flush();
             _begun = false;
+            _camera = null;
+
+            _trianglesBatched = 0;
+            _trianglesCalled = 0;
+        }
+
+        /// <summary>
+        /// Checks wether the point is inside the camera bounds
+        /// </summary>
+        /// <param name="position">the point to cull check</param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool FrustumCullTest(in Vector2 position)
+        {
+            RectangleF bounds = _camera != null ? _camera.Bounds : RenderCommand.Viewport;
+
+            return bounds.IsInside(position);
+        }
+
+        /// <summary>
+        /// Checks wether the point is inside the camera bounds
+        /// </summary>
+        /// <param name="position">the point to cull check</param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool FrustumCullTest(in RectangleF box)
+        {
+            RectangleF bounds = _camera != null ? _camera.Bounds : RenderCommand.Viewport;
+
+            return bounds.IntersectsWith(box);
         }
 
         static void Flush()

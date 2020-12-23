@@ -20,7 +20,7 @@ namespace Monorail.Renderer
     {
         public bool GenerateMipmaps = false;
         public PixelInternalFormat InternalFormat = PixelInternalFormat.Rgba8;
-        public PixelFormat PixelFormat = PixelFormat.Rgba;
+        public PixelFormat PixelFormat = PixelFormat.Bgra;
         public PixelType PixelType = PixelType.UnsignedByte;
 
         public TextureWrapMode WrapR = TextureWrapMode.Repeat;
@@ -173,7 +173,7 @@ namespace Monorail.Renderer
                 throw new OpenGLResourceCreationException(ResourceType.Texture);
 
             if (builder.GenerateMipmaps)
-                MipmapLevels = (int)Math.Floor(Math.Log(Math.Max(width, height), 2));
+                MipmapLevels = (int)MathHelper.Floor(MathHelper.Log(MathHelper.Max(width, height), 2));
             else MipmapLevels = 1;
 
             var old = BindedTextures[0];

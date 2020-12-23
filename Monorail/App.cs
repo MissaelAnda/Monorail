@@ -51,19 +51,18 @@ namespace Monorail
 
             parent = new Transform2D();
             quad = new Transform2D();
-            //quad.Parent = parent;
-            parent.LocalScale = new Vector2(300, 250);
-            quad.Position = new Vector2(500, 0);
-            quad.Scale = new Vector2(200);
+
+            quad.LocalPosition = new Vector2(500, 0);
+            quad.Scale = new Vector2(100);
+            quad.Parent = parent;
 
             camera = new Camera2D();
             //camera = new Camera2D(new Vector2(2, 2));
-            camera.Transform = parent;
+            camera.Transform = new Transform2D();
 
             Background = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\charliebrown.jpg", new TextureBuilder()
             {
-                InternalFormat = PixelInternalFormat.Rgba,
-                PixelFormat = PixelFormat.Bgra
+                GenerateMipmaps = true,
             });
         }
 
@@ -71,7 +70,7 @@ namespace Monorail
         {
             layerStack.Update(args.Time);
 
-            quad.LocalRotation += (float)args.Time;
+            parent.LocalRotation += (float)args.Time;
 
             // Should be processed in the ecs system
             // Shouldn't resize to 0,0 when minimized
@@ -97,7 +96,12 @@ namespace Monorail
             RenderCommand.SetCaps(EnableCap.Blend);
 
             Renderer2D.Begin(camera);
-            Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
+            int x = -750;
+            int y = -550;
+            for (int i = 0; i < 100; i++)
+                for (int j = 0; j < 100; j++)
+                    Renderer2D.DrawQuad(new Transform2D().SetPosition(new Vector2(x + i * 25, y + j * 25)).SetScale(20), new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
+            //Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
             Renderer2D.End();
 
             Framebuffer.Unbind();
@@ -116,6 +120,7 @@ namespace Monorail
         protected override void OnResize(ResizeEventArgs e)
         {
             base.OnResize(e);
+
             RenderCommand.SetViewportSize(e.Width, e.Height);
             Width = e.Width;
             Height = e.Height;

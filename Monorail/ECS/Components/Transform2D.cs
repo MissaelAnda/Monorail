@@ -279,8 +279,8 @@ namespace Monorail.ECS
                         _dirty &= ~DirtyType.LocalScale;
                     }
 
-                    Matrix2DExt.Mult(_scaleMatrix, _rotationMatrix, out _localTransform);
-                    Matrix2DExt.Mult(_localTransform, _translationMatrix, out _localTransform);
+                    Matrix2DExt.Mult(_scaleMatrix, _rotationMatrix, out var temp);
+                    Matrix2DExt.Mult(temp, _translationMatrix, out _localTransform);
 
                     if (Parent == null)
                     {
@@ -348,6 +348,29 @@ namespace Monorail.ECS
             _dirty |= DirtyType.Position;
             return this;
         }
+
+
+        /// <summary>
+		/// sets the position of the transform in world space
+		/// </summary>
+		/// <returns>The position.</returns>
+		/// <param name="position">Position.</param>
+        public Transform2D SetPosition(float x, float y)
+        {
+            if (x == _position.X && y == _position.Y)
+                return this;
+
+            _position.X = x;
+            _position.Y = y;
+            if (Parent != null)
+                LocalPosition = Vector2Ext.Transform(_position, WorldToLocalTransform);
+            else
+                LocalPosition = _position;
+
+            _dirty |= DirtyType.Position;
+            return this;
+        }
+
 
         /// <summary>
 		/// sets the global scale of the transform
@@ -419,6 +442,25 @@ namespace Monorail.ECS
                 return this;
 
             _localPosition = position;
+            _dirty |= DirtyType.LocalPosition | DirtyType.LocalScale | DirtyType.LocalRotation;
+            SetDirty(DirtyType.Position);
+
+            return this;
+        }
+
+        /// <summary>
+		/// sets the position of the transform relative to the parent transform. If the transform has no parent, it is the same
+		/// as Transform.position
+		/// </summary>
+		/// <returns>The local position.</returns>
+		/// <param name="localPosition">Local position.</param>
+        public Transform2D SetLocalPosition(float x, float y)
+        {
+            if (x == _localPosition.X && y == _localPosition.Y)
+                return this;
+
+            _localPosition.X = x;
+            _localPosition.Y = y;
             _dirty |= DirtyType.LocalPosition | DirtyType.LocalScale | DirtyType.LocalRotation;
             SetDirty(DirtyType.Position);
 

@@ -278,7 +278,7 @@ namespace Monorail.Layers.ImGUI
 
                 if (cmd_list.VtxBuffer.Size > _vao.VertexBuffer.DataLength)
                 {
-                    int newSize = (int)Math.Max(_vertexBufferSize * 1.5f, cmd_list.VtxBuffer.Size);
+                    int newSize = (int)System.Math.Max(_vertexBufferSize * 1.5f, cmd_list.VtxBuffer.Size);
                     _vao.VertexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _vertexBufferSize = newSize;
 
@@ -287,7 +287,7 @@ namespace Monorail.Layers.ImGUI
 
                 if (cmd_list.IdxBuffer.Size > _vao.IndexBuffer.DataLength)
                 {
-                    int newSize = (int)Math.Max(_indexBufferSize * 1.5f, cmd_list.IdxBuffer.Size);
+                    int newSize = (int)System.Math.Max(_indexBufferSize * 1.5f, cmd_list.IdxBuffer.Size);
                     _vao.IndexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _indexBufferSize = newSize;
 
