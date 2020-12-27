@@ -56,7 +56,7 @@ namespace Monorail
             quad.Scale = new Vector2(150, 100);
             quad.Parent = parent;
 
-            camera = new Camera2D();
+            camera = new Camera2D(parent);
             //camera = new Camera2D(new Vector2(2, 2));
             camera.Transform = new Transform2D();
 
@@ -74,7 +74,7 @@ namespace Monorail
         {
             layerStack.Update(args.Time);
 
-            parent.LocalRotation += (float)args.Time;
+            parent.Rotation += (float)args.Time;
 
             // Should be processed in the ecs system
             // Shouldn't resize to 0,0 when minimized

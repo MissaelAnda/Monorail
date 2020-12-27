@@ -1,116 +1,114 @@
 ﻿using System;
+using System.Collections.Generic;
 using Monorail.Util;
 using OpenTK.Mathematics;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Matrix2D = OpenTK.Mathematics.Matrix3x2;
+using ImVec2 = System.Numerics.Vector2;
+using Matrix2D = System.Numerics.Matrix3x2;
 
 namespace Monorail.ECS
 {
     public class Transform2D
     {
-        [Flags]
-        enum DirtyType
-        {
-            Clean,
-
-            Position,
-            Scale,
-            Rotation,
-
-            LocalPosition,
-            LocalScale,
-            LocalRotation,
-
-            WorldToLocal,
-            WorldInverse,
-
-            Global = Position | Scale | Rotation,
-            Local = LocalPosition | LocalScale | LocalRotation,
-        }
-
-        public enum Component
-        {
-            Position,
-            Scale,
-            Rotation,
-        }
-
-        #region getters and setters
+        #region Public Properties
 
         /// <summary>
-		/// the parent Transform of this Transform
-		/// </summary>
-		/// <value>The parent.</value>
-		public Transform2D Parent
+        /// An action called whenever the Transform is modified
+        /// </summary>
+        public event Action OnChanged;
+
+        /// <summary>
+        /// Gets or Sets the Transform's Parent
+        /// Modifying this does not change the World position of the Transform
+        /// </summary>
+        public Transform2D Parent
         {
             get => _parent;
-            set => SetParent(value);
+            set => SetParent(value, true);
         }
 
         /// <summary>
-		/// total children of this Transform
-		/// </summary>
-		/// <value>The child count.</value>
-		public int ChildCount => _children.Count;
-
-        /// <summary>
-        /// World space position
+        /// Gets or Sets the World Position of the Transform
         /// </summary>
         public Vector2 Position
         {
             get
             {
-                Update();
-                if (_dirty.HasFlag(DirtyType.Position))
-                {
-                    if (Parent == null)
-                    {
-                        _position = _localPosition;
-                    }
-                    else
-                    {
-                        Parent.Update();
-                        _position.Transform(ref _localPosition, ref Parent._worldTransform);
-                    }
+                if (_dirty)
+                    Update();
 
-                    _dirty &= ~DirtyType.Position;
-                }
-
-                return _position;
+                return new Vector2(_worldMatrix.M31, _worldMatrix.M32);
             }
             set => SetPosition(value);
         }
 
         /// <summary>
-        /// World space scale (local + parents)
+        /// Gets or Sets the X Component of the World Position of the Transform
+        /// </summary>
+        public float X
+        {
+            get => Position.X;
+            set => SetPosition(value, Position.Y);
+        }
+
+        /// <summary>
+        /// Gets or Sets the Y Component of the World Position of the Transform
+        /// </summary>
+        public float Y
+        {
+            get => Position.Y;
+            set => SetPosition(Position.X, value);
+        }
+
+        /// <summary>
+        /// Gets or Sets the Local Position of the Transform
+        /// </summary>
+        public Vector2 LocalPosition
+        {
+            get => new Vector2(localMatrix.M31, localMatrix.M32);
+            set => SetLocalPosition(value);
+        }
+
+        /// <summary>
+        /// Gets or Sets the World Scale of the Transform
         /// </summary>
         public Vector2 Scale
         {
             get
             {
-                Update();
+                if (_dirty)
+                    Update();
+
                 return _scale;
             }
             set => SetScale(value);
         }
 
         /// <summary>
-        /// World space rotation in radians
+        /// Gets or Sets the Local Scale of the Transform
+        /// </summary>
+        public Vector2 LocalScale
+        {
+            get => _localScale;
+            set => SetLocalScale(value);
+        }
+
+        /// <summary>
+        /// Gets or Sets the World Rotation of the Transform in radians
         /// </summary>
         public float Rotation
         {
             get
             {
-                Update();
+                if (_dirty)
+                    Update();
+
                 return _rotation;
             }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set => SetRotation(value);
         }
 
         /// <summary>
-        /// World space rotation in degrees
+        /// Gets or Sets the World Rotation of the Transform in degrees
         /// </summary>
         public float RotationDegrees
         {
@@ -118,48 +116,17 @@ namespace Monorail.ECS
             set => SetRotationDegrees(value);
         }
 
-
         /// <summary>
-        /// Local position relative to parent
-        /// </summary>
-        public Vector2 LocalPosition
-        {
-            get
-            {
-                Update();
-                return _localPosition;
-            }
-            set => SetLocalPosition(value);
-        }
-
-        /// <summary>
-        /// Local scale relative to parent
-        /// </summary>
-        public Vector2 LocalScale
-        {
-            get
-            {
-                Update();
-                return _localScale;
-            }
-            set => SetLocalScale(value);
-        }
-
-        /// <summary>
-        /// Local rotation relative to parent in radians
+        /// Gets or Sets the Local Rotation of the Transform in radians
         /// </summary>
         public float LocalRotation
         {
-            get
-            {
-                Update();
-                return _localRotation;
-            }
+            get => _localRotation;
             set => SetLocalRotation(value);
         }
 
         /// <summary>
-        /// Local rotation relative to parent in degrees
+        /// Gets or Sets the Local Rotation of the Transform in degrees
         /// </summary>
         public float LocalRotationDegrees
         {
@@ -167,411 +134,372 @@ namespace Monorail.ECS
             set => SetLocalRotationDegrees(value);
         }
 
-        public Matrix2D WorldInverseTransform
+        /// <summary>
+        /// Gets the Local Matrix of the Transform
+        /// </summary>
+        public Matrix2D LocalMatrix
         {
             get
             {
-                Update();
-                if (_dirty.HasFlag(DirtyType.WorldInverse))
-                {
-                    _worldTransform.CreateInvert(out _worldInverseTransform);
-                    _dirty &= ~DirtyType.WorldInverse;
-                }
-
-                return _worldInverseTransform;
+                if (_dirty)
+                    Update();
+                return localMatrix;
             }
         }
 
-        public Matrix2D LocalToWorldTransform
+        /// <summary>
+        /// Gets the World Matrix of the Transform
+        /// </summary>
+        public Matrix2D WorldMatrix
         {
             get
             {
-                Update();
-                return _worldTransform;
+                if (_dirty)
+                    Update();
+                return _worldMatrix;
             }
         }
 
-
-        public Matrix2D WorldToLocalTransform
+        /// <summary>
+        /// Gets the World-to-Local Matrix of the Transform
+        /// </summary>
+        public Matrix2D WorldToLocalMatrix
         {
             get
             {
-                if (_dirty.HasFlag(DirtyType.WorldToLocal))
-                {
-                    if (Parent == null)
-                    {
-                        _worldToLocalTransform = Matrix2DExt.Identity;
-                    }
-                    else
-                    {
-                        Parent.Update();
-                        Parent._worldTransform.CreateInvert(out _worldToLocalTransform);
-                    }
-
-                    _dirty &= ~DirtyType.WorldToLocal;
-                }
-
-                return _worldToLocalTransform;
+                if (_dirty)
+                    Update();
+                return _worldToLocalMatrix;
             }
         }
+
+        public List<Transform2D> Children { get; private set; } = new List<Transform2D>();
 
         #endregion
 
-        Transform2D _parent;
-        DirtyType _dirty;
+        private Transform2D _parent = null;
+        private bool _dirty = true;
 
-        // value is automatically recomputed from the position, rotation and scale
-        Matrix2D _localTransform;
+        //private Vector2 position = Vector2.Zero;
+        //private Vector2 localPosition = Vector2.Zero;
 
-        // value is automatically recomputed from the local and the parent matrices.
-        Matrix2D _worldTransform = Matrix2DExt.Identity;
-        Matrix2D _worldToLocalTransform = Matrix2DExt.Identity;
-        Matrix2D _worldInverseTransform = Matrix2DExt.Identity;
+        private Vector2 _scale = Vector2.One;
+        private Vector2 _localScale = Vector2.One;
 
-        Matrix2D _rotationMatrix;
-        Matrix2D _translationMatrix;
-        Matrix2D _scaleMatrix;
+        private float _rotation = 0f;
+        private float _localRotation = 0f;
 
-        Vector2 _position = Vector2.Zero;
-        Vector2 _scale = Vector2.One;
-        float _rotation = 0f;
+        private Matrix2D localMatrix = Matrix2D.Identity;
+        private Matrix2D _worldMatrix = Matrix2D.Identity;
+        private Matrix2D _worldToLocalMatrix = Matrix2D.Identity;
 
-        Vector2 _localPosition = Vector2.Zero;
-        Vector2 _localScale = Vector2.One;
-        float _localRotation = 0f;
-
-        List<Transform2D> _children = new List<Transform2D>();
+        #region fluent setters
 
         /// <summary>
-		/// returns the Transform child at index
-		/// </summary>
-		/// <returns>The child.</returns>
-		/// <param name="index">Index.</param>
-		public Transform2D GetChild(int index)
+        /// Sets the Parent of this Transform
+        /// </summary>
+        /// <param name="value">The new Parent</param>
+        /// <param name="retainWorldPosition">Whether this Transform should retain its world position when it is transfered to the new parent</param>
+        public Transform2D SetParent(Transform2D value, bool retainWorldPosition = false)
         {
-            return _children[index];
-        }
-
-        public void Update()
-        {
-            // Has any local variable dirty
-            if (_dirty != DirtyType.Clean)
+            if (_parent != value)
             {
-                Parent?.Update();
+                // Circular Hierarchy isn't allowed
+                if (value != null && value.Parent == this)
+                    throw new Exception("Circular Transform Heritage is not allowed");
 
-                if ((int)(_dirty & DirtyType.Local) > 0)
+                // Remove our OnChanged listener from the existing parent
+                // and remove this from the parent's children list
+                if (_parent != null)
                 {
-                    if (_dirty.HasFlag(DirtyType.LocalPosition))
-                    {
-                        Matrix2DExt.CreateTranslation(_localPosition.X, _localPosition.Y, out _translationMatrix);
-                        _dirty &= ~DirtyType.LocalPosition;
-                    }
-
-                    if (_dirty.HasFlag(DirtyType.LocalRotation))
-                    {
-                        Matrix2D.CreateRotation(_localRotation, out _rotationMatrix);
-                        _dirty &= ~DirtyType.LocalRotation;
-                    }
-
-                    if (_dirty.HasFlag(DirtyType.LocalScale))
-                    {
-                        Matrix2D.CreateScale(_localScale.X, _localScale.Y, out _scaleMatrix);
-                        _dirty &= ~DirtyType.LocalScale;
-                    }
-
-                    Matrix2DExt.Mult(_scaleMatrix, _rotationMatrix, out var temp);
-                    Matrix2DExt.Mult(temp, _translationMatrix, out _localTransform);
-
-                    if (Parent == null)
-                    {
-                        _worldTransform = _localTransform;
-                        _rotation = _localRotation;
-                        _scale = _localScale;
-                        _dirty |= DirtyType.WorldInverse;
-                    }
+                    _parent.OnChanged -= MakeDirty;
+                    _parent.Children.Remove(this);
                 }
 
-                if (Parent != null)
-                {
-                    Matrix2DExt.Mult(_localTransform, Parent._worldTransform, out _worldTransform);
+                // store state
+                var position = Position;
+                var scale = Scale;
+                var rotation = Rotation;
 
-                    _rotation = _localRotation + Parent._rotation;
-                    _scale = Parent._scale * _localScale;
-                    _dirty |= DirtyType.WorldInverse;
+                // update parent
+                _parent = value;
+                _dirty = true;
+
+                // retain state
+                if (retainWorldPosition)
+                {
+                    Position = position;
+                    Scale = scale;
+                    Rotation = rotation;
                 }
 
-                _dirty |= DirtyType.Position | DirtyType.WorldToLocal;
+                // Add our OnChanged listener to the new parent
+                // And add this to the parent's children list
+                if (_parent != null)
+                {
+                    _parent.OnChanged += MakeDirty;
+                    _parent.Children.Add(this);
+                }
+
+                // we have changed
+                OnChanged?.Invoke();
             }
-        }
-
-        #region Fluent setters
-
-        /// <summary>
-		/// sets the parent Transform of this Transform
-		/// </summary>
-		/// <returns>The parent.</returns>
-		/// <param name="parent">Parent.</param>
-		public Transform2D SetParent(Transform2D parent)
-        {
-            if (_parent == parent)
-                return this;
-
-            if (_parent != null)
-                _parent._children.Remove(this);
-
-            if (parent != null)
-                parent._children.Add(this);
-
-            _parent = parent;
-            SetDirty(DirtyType.Position);
 
             return this;
         }
 
         /// <summary>
-		/// sets the position of the transform in world space
-		/// </summary>
-		/// <returns>The position.</returns>
-		/// <param name="position">Position.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// Fluent setter for world position
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public Transform2D SetPosition(Vector2 position)
         {
-            if (position == _position)
-                return this;
-
-            _position = position;
-            if (Parent != null)
-                LocalPosition = Vector2Ext.Transform(_position, WorldToLocalTransform);
-            else
+            if (_parent == null)
                 LocalPosition = position;
+            else
+                LocalPosition = ImVec2.Transform(position.ToImVec2(), WorldToLocalMatrix).ToVector2();
 
-            _dirty |= DirtyType.Position;
             return this;
         }
 
-
         /// <summary>
-		/// sets the position of the transform in world space
-		/// </summary>
-		/// <returns>The position.</returns>
-		/// <param name="position">Position.</param>
+        /// Flient setter for worl position with x and y
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
         public Transform2D SetPosition(float x, float y)
-        {
-            if (x == _position.X && y == _position.Y)
-                return this;
-
-            _position.X = x;
-            _position.Y = y;
-            if (Parent != null)
-                LocalPosition = Vector2Ext.Transform(_position, WorldToLocalTransform);
-            else
-                LocalPosition = _position;
-
-            _dirty |= DirtyType.Position;
-            return this;
-        }
-
+            => SetPosition(new Vector2(x, y));
 
         /// <summary>
-		/// sets the global scale of the transform
-		/// </summary>
-		/// <returns>The scale.</returns>
-		/// <param name="scale">Scale.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Transform2D SetScale(Vector2 scale)
-        {
-            _scale = scale;
-            if (Parent != null)
-                LocalScale = Vector2.Divide(scale, Parent._scale);
-            else
-                LocalScale = scale;
-
-            return this;
-        }
-
-        /// <summary>
-		/// sets the global scale of the transform
-		/// </summary>
-		/// <returns>The scale.</returns>
-		/// <param name="scale">Scale.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Transform2D SetScale(float scale)
-        {
-            return SetScale(new Vector2(scale));
-        }
-
-        /// <summary>
-		/// sets the rotation of the transform in world space in radians
-		/// </summary>
-		/// <returns>The rotation.</returns>
-		/// <param name="radians">Radians.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Transform2D SetRotation(float radians)
-        {
-            _rotation = radians;
-            if (Parent != null)
-                LocalRotation = Parent.Rotation + radians;
-            else
-                LocalRotation = radians;
-
-            return this;
-        }
-
-        /// <summary>
-		/// sets the rotation of the transform in world space in degrees
-		/// </summary>
-		/// <returns>The rotation.</returns>
-		/// <param name="radians">Radians.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Transform2D SetRotationDegrees(float degrees)
-        {
-            return SetRotation(MathHelper.DegreesToRadians(degrees));
-        }
-
-
-        /// <summary>
-		/// sets the position of the transform relative to the parent transform. If the transform has no parent, it is the same
-		/// as Transform.position
-		/// </summary>
-		/// <returns>The local position.</returns>
-		/// <param name="localPosition">Local position.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// Fluent setter for local position
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public Transform2D SetLocalPosition(Vector2 position)
         {
-            if (position == _localPosition)
-                return this;
-
-            _localPosition = position;
-            _dirty |= DirtyType.LocalPosition | DirtyType.LocalScale | DirtyType.LocalRotation;
-            SetDirty(DirtyType.Position);
+            if (LocalPosition != position)
+            {
+                localMatrix.M31 = position.X;
+                localMatrix.M32 = position.Y;
+                MakeDirty();
+            }
 
             return this;
         }
 
         /// <summary>
-		/// sets the position of the transform relative to the parent transform. If the transform has no parent, it is the same
-		/// as Transform.position
-		/// </summary>
-		/// <returns>The local position.</returns>
-		/// <param name="localPosition">Local position.</param>
+        /// Fluent setter for local position with x and y
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
         public Transform2D SetLocalPosition(float x, float y)
-        {
-            if (x == _localPosition.X && y == _localPosition.Y)
-                return this;
+            => SetLocalPosition(new Vector2(x, y));
 
-            _localPosition.X = x;
-            _localPosition.Y = y;
-            _dirty |= DirtyType.LocalPosition | DirtyType.LocalScale | DirtyType.LocalRotation;
-            SetDirty(DirtyType.Position);
+        /// <summary>
+        /// Fluent setter for world scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
+        public Transform2D SetScale(Vector2 scale)
+        {
+            if (_parent == null)
+            {
+                SetLocalScale(scale);
+            }
+            else
+            {
+                if (_parent.Scale.X == 0)
+                    scale.X = 0;
+                else
+                    scale.X /= _parent.Scale.X;
+
+                if (_parent.Scale.Y == 0)
+                    scale.Y = 0;
+                else
+                    scale.Y /= _parent.Scale.Y;
+
+                SetLocalScale(scale);
+            }
 
             return this;
         }
 
         /// <summary>
-		/// sets the scale of the transform relative to the parent. If the transform has no parent, it is the same as Transform.scale
-		/// </summary>
-		/// <returns>The local scale.</returns>
-		/// <param name="scale">Scale.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// Fluent setter for world scale with x and y
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public Transform2D SetScale(float x, float y)
+            => SetScale(new Vector2(x, y));
+
+        /// <summary>
+        /// Fluent setter for uniform world scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
+        public Transform2D SetScale(float scale)
+            => SetScale(new Vector2(scale));
+
+        /// <summary>
+        /// Fluent setter for local scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
         public Transform2D SetLocalScale(Vector2 scale)
         {
-            _localScale = scale;
-            SetDirty(DirtyType.Scale);
-            SetDirty(DirtyType.Position);
-            _dirty |= DirtyType.LocalScale;
+            if (_localScale != scale)
+            {
+                _localScale = scale;
+                MakeDirty();
+            }
 
             return this;
         }
 
         /// <summary>
-		/// sets the scale of the transform relative to the parent. If the transform has no parent, it is the same as Transform.scale
-		/// </summary>
-		/// <returns>The local scale.</returns>
-		/// <param name="scale">Scale.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// Fluent setter for local scale with x and y
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        public Transform2D SetLocalScale(float x, float y)
+            => SetLocalScale(new Vector2(x, y));
+
+        /// <summary>
+        /// Fluent setter for uniform local scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns></returns>
         public Transform2D SetLocalScale(float scale)
+            => SetLocalScale(new Vector2(scale));
+
+        /// <summary>
+        /// Fluent setter for world rotation in radians
+        /// </summary>
+        /// <param name="radians"></param>
+        /// <returns></returns>
+        public Transform2D SetRotation(float radians)
         {
-            return SetLocalScale(new Vector2(scale));
+            if (_parent == null)
+                LocalRotation = radians;
+            else
+                LocalRotation = radians - _parent.Rotation;
+
+            return this;
         }
 
         /// <summary>
-		/// sets the the rotation of the transform relative to the parent transform's rotation. If the transform has no parent, it is the
-		/// same as Transform.rotation
-		/// </summary>
-		/// <returns>The local rotation.</returns>
-		/// <param name="radians">Radians.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// Fluent setter for world rotation in degrees
+        /// </summary>
+        /// <param name="degrees"></param>
+        /// <returns></returns>
+        public Transform2D SetRotationDegrees(float degrees)
+            => SetRotation(MathHelper.DegreesToRadians(degrees));
+
+        /// <summary>
+        /// Fluent setter for local rotation in radians
+        /// </summary>
+        /// <param name="radians"></param>
+        /// <returns></returns>
         public Transform2D SetLocalRotation(float radians)
         {
-            if (_localRotation == radians)
-                return this;
-
-            _localRotation = radians;
-
-            SetDirty(DirtyType.Position);
-            _dirty |= DirtyType.LocalPosition | DirtyType.LocalScale | DirtyType.LocalRotation;
+            if (_localRotation != radians)
+            {
+                _localRotation = radians;
+                MakeDirty();
+            }
 
             return this;
         }
 
         /// <summary>
-		/// sets the the rotation of the transform relative to the parent transform's rotation. If the transform has no parent, it is the
-		/// same as Transform.rotation
-		/// </summary>
-		/// <returns>The local rotation.</returns>
-		/// <param name="radians">Radians.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Transform2D SetLocalRotationDegrees(float degree)
-        {
-            return SetLocalRotation(MathHelper.DegreesToRadians(degree));
-        }
+        /// Fluent setter for local rotation in degrees
+        /// </summary>
+        /// <param name="degrees"></param>
+        /// <returns></returns>
+        public Transform2D SetLocalRotationDegrees(float degrees)
+            => SetLocalRotation(MathHelper.DegreesToRadians(degrees));
 
         #endregion
 
-        /// <summary>
-		/// rounds the position of the Transform
-		/// </summary>
-		public void RoundPosition()
+        private void Update()
         {
-            Position = Vector2Ext.Round(_position);
+            _dirty = false;
+
+            Matrix2D matrix = Matrix2D.Identity;
+
+            if (_localScale != Vector2.One)
+                matrix *= Matrix2D.CreateScale(_scale.X, _scale.Y);
+
+            if (_localRotation != 0)
+                matrix *= Matrix2D.CreateRotation(_rotation);
+
+            var localPosition = LocalPosition;
+            if (localPosition != Vector2.Zero)
+                matrix *= Matrix2D.CreateTranslation(localPosition.X, localPosition.Y);
+
+            localMatrix = matrix;
+
+            if (_parent == null)
+            {
+                _worldMatrix = localMatrix;
+                _worldToLocalMatrix = Matrix2D.Identity;
+                //Position = localPosition;
+                _scale = _localScale;
+                _rotation = _localRotation;
+            }
+            else
+            {
+                _worldMatrix = localMatrix * _parent.WorldMatrix;
+                Matrix2D.Invert(_parent._worldMatrix, out _worldToLocalMatrix);
+                //Position = ImVec2.Transform(localPosition.ToImVec2(), parent.WorldMatrix).ToVector2();
+                _scale = _localScale * _parent.Scale;
+                _rotation = _localRotation + _parent.Rotation;
+            }
+
         }
 
+        private void MakeDirty()
+        {
+            if (!_dirty)
+            {
+                _dirty = true;
+                OnChanged?.Invoke();
+            }
+        }
+
+
+        /// <summary>
+        /// Copies the other transform world transfrom and sets it to local
+        /// </summary>
+        /// <param name="transform">the transform to be copied from</param>
         public void CopyFrom(Transform2D transform)
         {
-            _position = transform.Position;
-            _localPosition = transform._localPosition;
+            Position = transform.Position;
             _rotation = transform._rotation;
             _localRotation = transform._localRotation;
             _scale = transform._scale;
             _localScale = transform._localScale;
-
-            SetDirty(DirtyType.LocalPosition);
-            SetDirty(DirtyType.LocalRotation);
-            SetDirty(DirtyType.LocalScale);
         }
 
         /// <summary>
-		/// sets the dirty flag on the enum and passes it down to our children
-		/// </summary>
-		/// <param name="dirtyFlagType">Dirty flag type.</param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void SetDirty(DirtyType dirtyFlagType)
+        /// Clones the transform without a parent and children
+        /// </summary>
+        /// <returns>The cloned transform</returns>
+        public Transform2D Clone()
         {
-            if ((_dirty & dirtyFlagType) == 0)
-            {
-                _dirty |= dirtyFlagType;
+            var trans = new Transform2D();
 
-                // dirty our children as well so they know of the changes
-                for (var i = 0; i < _children.Count; i++)
-                    _children[i].SetDirty(dirtyFlagType);
-            }
-        }
+            trans.LocalPosition = Position;
+            trans._scale = trans._localScale = Scale;
+            trans._rotation = trans._localRotation = Rotation;
+            trans._dirty = true;
 
-        public override string ToString()
-        {
-            return string.Format(
-                "[Transform: parent: {0}, position: {1}, rotation: {2}, scale: {3}, localPosition: {4}, localRotation: {5}, localScale: {6}]",
-                Parent != null, Position, Rotation, Scale, LocalPosition, LocalRotation, LocalScale);
+            return trans;
         }
     }
 }
