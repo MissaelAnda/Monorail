@@ -18,6 +18,8 @@ namespace Monorail.Renderer
 
     public class TextureBuilder
     {
+        public static TextureBuilder Default => new TextureBuilder();
+
         public bool GenerateMipmaps = false;
         public PixelInternalFormat InternalFormat = PixelInternalFormat.Rgba8;
         public PixelFormat PixelFormat = PixelFormat.Bgra;

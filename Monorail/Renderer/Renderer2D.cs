@@ -5,6 +5,8 @@ using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
 using Monorail.Util;
 using System.Runtime.CompilerServices;
+using Monorail.Math;
+using System.Collections.Generic;
 
 namespace Monorail.Renderer
 {
@@ -80,6 +82,8 @@ namespace Monorail.Renderer
         static int _trianglesBatched = 0;
 
         static int _trianglesCalled = 0;
+
+        static Dictionary<int, List<Vector2>> _elipsesCache = new Dictionary<int, List<Vector2>>(100);
 
         static Renderer2D()
         {
@@ -168,6 +172,163 @@ namespace Monorail.Renderer
             }
 
             // Queue texture
+            byte texPos = BatchTexture(texture);
+
+            // Create the vertecies
+            var vertices = new Vertex2D[4];
+            for (int i = 0; i < 4; i++)
+                vertices[i] = new Vertex2D(positions[i].ToVector3(), color[i], uvPositions[i], texPos);
+
+            // Batch them
+            _trianglesBatcher.PushVertices(vertices);
+
+            _trianglesBatched += 2;
+            // Add the 2 triangles indices
+            _trianglesBatcher.PushIndices(
+                _indexOffset, _indexOffset + 1, _indexOffset + 2, // Bottom left triangle
+                _indexOffset + 2, _indexOffset + 3, _indexOffset  // Top Right triangle
+            );
+            // Two triangles moves the offset by 4
+            _indexOffset += 4;
+        }
+
+        public static void DrawTriangle(Vector2[] positions, Color4[] colors, Texture2D texture = null, Vector2[] texCoordinates = null)
+        {
+            Insist.AssertEq(positions.Length, 3);
+            Insist.AssertEq(colors.Length, 3);
+            if (texCoordinates != null)
+                Insist.AssertEq(texCoordinates.Length, 3);
+
+            // Frustum culling test
+            for (int i = 0; i < 3; i++)
+            {
+                if (!FrustumCullTest(positions[i]))
+                    return;
+            }
+
+            // Create texture coordinates
+            if (texCoordinates == null)
+            {
+                float minX = MathExtra.Min(positions[0].X, positions[1].X, positions[2].X);
+                float minY = MathExtra.Min(positions[0].Y, positions[1].Y, positions[2].Y);
+                float maxX = MathExtra.Max(positions[0].X, positions[1].X, positions[2].X);
+                float maxY = MathExtra.Max(positions[0].Y, positions[1].Y, positions[2].Y);
+
+                float distX = maxX - minX;
+                float distY = maxY - minY;
+
+                texCoordinates = new Vector2[3];
+
+                texCoordinates[0].X = (positions[0].X - minX) / distX;
+                texCoordinates[0].Y = (positions[0].Y - minY) / distY;
+
+                texCoordinates[1].X = (positions[1].X - minX) / distX;
+                texCoordinates[1].Y = (positions[1].Y - minY) / distY;
+
+                texCoordinates[2].X = (positions[2].X - minX) / distX;
+                texCoordinates[2].Y = (positions[2].Y - minY) / distY;
+            }
+
+            var texPos = BatchTexture(texture);
+
+            Vertex2D[] vertices = new Vertex2D[3];
+            for (int i = 0; i < 3; i++)
+            {
+                vertices[i].Position = positions[i].ToVector3();
+                vertices[i].Color = colors[i];
+                vertices[i].UV = texCoordinates[i];
+                vertices[i].TextureIndex = texPos;
+            }
+
+            _trianglesBatcher.PushVertices(vertices);
+
+            _trianglesBatcher.PushIndices(_indexOffset, _indexOffset + 1, _indexOffset + 2);
+            _indexOffset += 3;
+        }
+
+        public static void DrawElipse(Transform2D trans, Color4 color, float radius = 1.0f, Texture2D texture = null, int? segments = null)
+        {
+            Insist.Assert(radius > 0);
+            if (segments.HasValue)
+                Insist.Assert(segments.Value >= 2);
+
+            float sideWidth = radius * trans.Scale.X;
+            float sideHeight = radius * trans.Scale.Y;
+
+            var boundingBox = new RectangleF(
+                trans.Position.X - sideWidth, trans.Position.Y - sideHeight,
+                sideWidth * 2, sideHeight * 2);
+
+            // If elipse's bounding box isn't inside the camera frustum
+            // there's no need to batch any vertices
+            if (!FrustumCullTest(boundingBox))
+                return;
+
+            var _segments = segments.HasValue ? segments.Value :
+                MathHelper.Max(2, (int)(6 * (float)System.Math.Cbrt(radius * MathHelper.Max(trans.Scale.X, trans.Scale.Y))));
+            var positions = CreateElipsePositions(_segments);
+
+            var startPoint = new Vector2(trans.Position.X + radius * trans.Scale.X, trans.Position.Y);
+
+            var texPos = BatchTexture(texture);
+            // Create the UV coordinates if there is a texture to bind
+            Vector2[] texCoordinates = new Vector2[positions.Length + 1];
+            if (texture != null)
+            {
+                texCoordinates[0].X = 1.0f;
+                texCoordinates[0].Y = 0.5f;
+
+                for (int i = 0; i < positions.Length; i++)
+                {
+                    texCoordinates[i + 1].X = (positions[i].X / 2f) + 0.5f;
+                    texCoordinates[i + 1].Y = (positions[i].Y / 2f) + 0.5f;
+                }
+            }
+
+            _trianglesBatcher.PushVertices(new Vertex2D(startPoint.ToVector3(), color, texCoordinates[0], texPos));
+            _trianglesBatcher.PushVertices(new Vertex2D(new Vector3(
+                trans.Position.X + positions[0].X * radius * trans.Scale.X,
+                trans.Position.Y + positions[0].Y * radius * trans.Scale.Y, 0),
+                color, texCoordinates[1], texPos));
+
+            for (uint i = 1; i < positions.Length; i++)
+            {
+                _trianglesBatcher.PushVertices(new Vertex2D(new Vector3(
+                    trans.Position.X + positions[i].X * radius * trans.Scale.X,
+                    trans.Position.Y + positions[i].Y * radius * trans.Scale.Y, 0),
+                    color, texCoordinates[i + 1], texPos));
+                _trianglesBatcher.PushIndices(_indexOffset);
+                _trianglesBatcher.PushIndices(_indexOffset + i);
+                _trianglesBatcher.PushIndices(_indexOffset + i + 1);
+            }
+            _indexOffset += (uint)positions.Length + 1;
+        }
+
+        static Vector2[] CreateElipsePositions(int segments)
+        {
+            // Check if points list with this amount of segments already exists
+            if (_elipsesCache.TryGetValue(segments, out var list))
+                return list.ToArray();
+
+            float leap = MathHelper.TwoPi / segments;
+
+            list = new List<Vector2>(segments);
+
+            int i = 0;
+            for (float pos = leap; pos < MathHelper.TwoPi; pos += leap)
+            {
+                list.Add(new Vector2((float)MathHelper.Cos(pos), (float)MathHelper.Sin(pos)));
+                i++;
+            }
+
+            // Save the list if needed later
+            _elipsesCache.Add(segments, list);
+
+            return list.ToArray();
+        }
+
+        static byte BatchTexture(Texture2D texture)
+        {
             byte texPos = 0;
             if (texture != null)
             {
@@ -190,28 +351,12 @@ namespace Monorail.Renderer
 
                     _textures[_textureOffset] = texture;
                     internalPos = (sbyte)_textureOffset++;
+                    texture.Bind(TextureUnit.Texture0 + internalPos);
                 }
 
-                texture.Bind(TextureUnit.Texture0 + internalPos);
                 texPos = (byte)(internalPos + 1);
             }
-
-            // Create the vertecies
-            var vertices = new Vertex2D[4];
-            for (int i = 0; i < 4; i++)
-                vertices[i] = new Vertex2D(positions[i].ToVector3(), color[i], uvPositions[i], texPos);
-
-            // Batch them
-            _trianglesBatcher.PushVertices(vertices);
-
-            _trianglesBatched += 2;
-            // Add the 2 triangles indices
-            _trianglesBatcher.PushIndices(
-                _indexOffset, _indexOffset + 1, _indexOffset + 2, // Bottom left triangle
-                _indexOffset + 2, _indexOffset + 3, _indexOffset  // Top Right triangle
-            );
-            // Two triangles moves the offset by 4
-            _indexOffset += 4;
+            return texPos;
         }
 
         public static void End()

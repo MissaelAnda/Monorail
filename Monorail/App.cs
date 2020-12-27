@@ -52,14 +52,18 @@ namespace Monorail
             parent = new Transform2D();
             quad = new Transform2D();
 
-            quad.LocalPosition = new Vector2(500, 0);
-            quad.Scale = new Vector2(100);
+            quad.Position = new Vector2(-200, 0);
+            quad.Scale = new Vector2(150, 100);
             quad.Parent = parent;
 
             camera = new Camera2D();
             //camera = new Camera2D(new Vector2(2, 2));
             camera.Transform = new Transform2D();
 
+            Test = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\blender2.83.png", new TextureBuilder()
+            {
+                GenerateMipmaps = true,
+            });
             Background = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\charliebrown.jpg", new TextureBuilder()
             {
                 GenerateMipmaps = true,
@@ -96,12 +100,20 @@ namespace Monorail
             RenderCommand.SetCaps(EnableCap.Blend);
 
             Renderer2D.Begin(camera);
-            int x = -750;
-            int y = -550;
-            for (int i = 0; i < 100; i++)
-                for (int j = 0; j < 100; j++)
-                    Renderer2D.DrawQuad(new Transform2D().SetPosition(new Vector2(x + i * 25, y + j * 25)).SetScale(20), new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
-            //Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
+            //int x = -750;
+            //int y = -550;
+            //for (int i = 0; i < 100; i++)
+            //    for (int j = 0; j < 100; j++)
+            //        Renderer2D.DrawQuad(new Transform2D().SetPosition(new Vector2(x + i * 25, y + j * 25)).SetScale(20), new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, i % 2 == 0 ? Background : Test);
+            Renderer2D.DrawElipse(parent, Color4.White, 200, Test);
+            Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
+            Renderer2D.DrawTriangle(
+                new Vector2[] { new Vector2(50, -150), new Vector2(200, 150), new Vector2(350, -150) },
+                new Color4[] { Color4.Red, Color4.Green, Color4.Blue }
+                //new Color4[] { Color4.White, Color4.White, Color4.White },
+                //Test
+            );
+
             Renderer2D.End();
 
             Framebuffer.Unbind();
