@@ -16,6 +16,16 @@ namespace Monorail.Layers
             Editor.SetupStyle();
         }
 
+        public override void OnAttached()
+        {
+            Editor.Enabled = true;
+        }
+
+        public override void OnDetached()
+        {
+            Editor.Enabled = false;
+        }
+
         public override void OnUpdate(double delta)
         {
             _controller.Update(_window, delta);

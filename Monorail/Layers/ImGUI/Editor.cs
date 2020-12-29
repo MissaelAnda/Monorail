@@ -3,11 +3,12 @@ using Monorail.Util;
 using OpenTK.Mathematics;
 using ImVec2 = System.Numerics.Vector2;
 
-namespace Monorail.Layers.ImGUI
+namespace Monorail.Layers
 {
     public static class Editor
     {
-        public static Vector2 Viewport { get; private set; } = Vector2.Zero;
+        public static Vector2 Viewport { get; internal set; } = Vector2.Zero;
+        public static bool Enabled { get; internal set; } = false;
         public static string text = "";
 
         public static void Process()

@@ -1,16 +1,19 @@
-﻿using Monorail.Util;
+﻿using Monorail.Math;
+using Monorail.Util;
+using Monorail.Debug;
 using System.Drawing;
-using OpenTK.Mathematics;
-using Monorail.Layers.ImGUI;
-using Matrix2D = OpenTK.Mathematics.Matrix3x2;
+using Monorail.Layers;
 using Monorail.Renderer;
-using Monorail.Math;
+using OpenTK.Mathematics;
+using Matrix2D = OpenTK.Mathematics.Matrix3x2;
+using System.ComponentModel.DataAnnotations;
 
 namespace Monorail.ECS
 {
     public class Camera2D
     {
-        internal Transform2D Transform;
+        private const float MaxZoom = 40f;
+        private const float MinZoom = 0.000000001f;
 
         enum MatrixDirtyType
         {
@@ -19,20 +22,37 @@ namespace Monorail.ECS
             Projection,
         }
 
+        #region Propeties
+
         public Vector2 Resolution
         {
-            // Check if Editor Layer is enabled to use viewport resolution, else use window height
             get
             {
-                var res = _resolution.HasValue ? _resolution.Value: Editor.Viewport;
+                // if the camera doesn't have a custom resolution it should use the viewport one
+                var res = _resolution.HasValue ? _resolution.Value : new Vector2(RenderCommand.Viewport.Width, RenderCommand.Viewport.Height);
                 if (res != _oldRes)
                 {
                     _dirtyType |= MatrixDirtyType.Projection;
+                    _origin = res / 2;
                     _oldRes = res;
                 }
                 return res;
             }
             set => SetResolution(value);
+        }
+
+        [Range(-1f, 1f)]
+        public float Zoom
+        {
+            get => (_zoom / MaxZoom) * 2 - 1;
+            set => Zoom = ((value + 1) / 2) * MaxZoom;
+        }
+
+        [Range(MinZoom, MaxZoom)]
+        public float RawZoom
+        {
+            get => _zoom;
+            set => _zoom = value;
         }
 
         public RectangleF Bounds
@@ -44,20 +64,15 @@ namespace Monorail.ECS
                 if (_areBoundsDirty)
                 {
                     // top-left and bottom-right are needed by either rotated or non-rotated bounds
-                    // TODO: Change screen size for Scene viewport
-                    var topLeft = ScreenToWorldPoint(new Vector2(RenderCommand.Viewport.X, RenderCommand.Viewport.Y));
-                    var bottomRight = ScreenToWorldPoint(new Vector2(
-                        RenderCommand.Viewport.X + RenderCommand.Viewport.Width,
-                        RenderCommand.Viewport.Y + RenderCommand.Viewport.Height));
+                    var topLeft = ScreenToWorldPoint(new Vector2(0));
+                    var bottomRight = ScreenToWorldPoint(new Vector2(Resolution.X, Resolution.Y));
 
                     if (Transform.Rotation != 0)
                     {
-                        // special care for rotated bounds. we need to find our absolute min/max values and create the bounds from that
-                        var topRight = ScreenToWorldPoint(new Vector2(
-                            RenderCommand.Viewport.X + RenderCommand.Viewport.Width,
-                            RenderCommand.Viewport.Y));
-                        var bottomLeft = ScreenToWorldPoint(new Vector2(RenderCommand.Viewport.X,
-                            RenderCommand.Viewport.Y + RenderCommand.Viewport.Height));
+                        // special care for rotated bounds. we need to find our
+                        // absolute min/max values and create the bounds from that
+                        var topRight = ScreenToWorldPoint(new Vector2(Resolution.X, 0));
+                        var bottomLeft = ScreenToWorldPoint(new Vector2(0, Resolution.Y));
 
                         var minX = MathExtra.Min(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
                         var maxX = MathExtra.Max(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
@@ -109,6 +124,8 @@ namespace Monorail.ECS
             }
         }
 
+        #endregion
+
         Matrix4 _projection;
         Matrix4 _view;
         Matrix4 _projectionView;
@@ -123,12 +140,44 @@ namespace Monorail.ECS
 
         Vector2? _resolution = null;
         Vector2 _oldRes;
+        Vector2 _origin;
 
-        public Camera2D() { }
+        float _zoom = 1f;
 
-        public Camera2D(Vector2 resolution)
+        internal Transform2D Transform;
+
+
+        public Camera2D(Transform2D transform)
+        {
+            Transform = transform;
+            Transform.OnChanged += MakeViewDirty;
+            _origin = Resolution / 2;
+        }
+
+        #region Fluent setters
+
+        public Camera2D SetResolution(Vector2 resolution)
         {
             _resolution = resolution;
+            _dirtyType |= MatrixDirtyType.Projection;
+            _origin = resolution / 2;
+            return this;
+        }
+
+        #endregion
+
+        public Vector2 ScreenToWorldPoint(Vector2 screenPosition)
+        {
+            var origin = screenPosition - Resolution / 2;
+            Update();
+            Vector2Ext.Transform(ref origin, ref _inverseTransformMatrix, out screenPosition);
+            return screenPosition;
+        }
+
+        public void UseDefaultResolution()
+        {
+            _dirtyType |= MatrixDirtyType.Projection;
+            _resolution = null;
         }
 
         void Update()
@@ -138,69 +187,55 @@ namespace Monorail.ECS
 
             if (_dirtyType.HasFlag(MatrixDirtyType.View))
             {
-                Matrix2D tempMat = Matrix2DExt.Identity;
-                _transformMatrix =
-                    Matrix2DExt.CreateTranslation(-Transform.Position.X, -Transform.Position.Y); // position
+                _transformMatrix = Matrix2DExt.Identity;
 
-                //if (_zoom != 1f)
-                //{
-                //    Matrix2D.CreateScale(_zoom, _zoom, out tempMat); // scale ->
-                //    Matrix2D.Multiply(ref _transformMatrix, ref tempMat, out _transformMatrix);
-                //}
+                // Should the transform's scale affect the zoom?
+                if (_zoom != 1f)
+                {
+                    Matrix2D.CreateScale(_zoom, _zoom, out _transformMatrix);
+                }
 
                 if (Transform.Rotation != 0f)
                 {
-                    Matrix2D.CreateRotation(Transform.Rotation, out tempMat); // rotation
-                    Matrix2DExt.Mult(_transformMatrix, tempMat, out _transformMatrix);
+                    Matrix2D.CreateRotation(Transform.Rotation, out var rotation); // rotation
+                    Matrix2DExt.Mult(_transformMatrix, rotation, out _transformMatrix);
                 }
 
-                //Matrix2DExt.CreateTranslation((int)_origin.X, (int)_origin.Y, out tempMat); // translate -origin
-                Matrix2DExt.Mult(_transformMatrix, tempMat, out _transformMatrix);
+                Matrix2DExt.CreateTranslation(Transform.Position.X, Transform.Position.Y, out var translation); // translate
+                Matrix2DExt.Mult(_transformMatrix, translation, out _transformMatrix);
 
                 // calculate our inverse as well
                 Matrix2DExt.CreateInvert(_transformMatrix, out _inverseTransformMatrix);
 
                 // View transform
-                Matrix4.CreateTranslation(Transform.Position.ToVector3(), out var trans);
-                Matrix4.CreateRotationZ(Transform.Rotation, out var rot);
-
-                Matrix4.Mult(trans, rot, out var mult);
-                Matrix4.Invert(mult, out _view);
+                _view = _inverseTransformMatrix.ToMat4();
             }
 
             if (_dirtyType.HasFlag(MatrixDirtyType.Projection))
             {
                 // Projection transform
-                var sideWidth = Resolution.X / 2;
-                var sideHeight = Resolution.Y / 2;
-                _projection = Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, 0f, 1f);
+                var resolution = Resolution;
+                Matrix4.CreateOrthographic(resolution.X, resolution.Y, 0f, 1f, out _projection);
             }
 
-            Matrix4.Mult(_projection, _view, out _projectionView);
+            Matrix4.Mult(_view, _projection, out _projectionView);
 
             _dirtyType = MatrixDirtyType.Clean;
             _areBoundsDirty = true;
         }
 
-        public Vector2 ScreenToWorldPoint(Vector2 screenPosition)
+        private void MakeViewDirty()
         {
-            Update();
-            var origin = screenPosition - Resolution / 2;
-            Vector2Ext.Transform(ref origin, ref _inverseTransformMatrix, out screenPosition);
-            return screenPosition;
+            _dirtyType |= MatrixDirtyType.View;
         }
 
-        public Camera2D SetResolution(Vector2 resolution)
+        internal void SetTransform(Transform2D transform)
         {
-            _resolution = resolution;
-            _dirtyType |= MatrixDirtyType.Projection;
-            return this;
-        }
+            Insist.AssertNotNull(transform, "Transform can't be null");
 
-        public void UseDefaultResolution()
-        {
-            _dirtyType |= MatrixDirtyType.Projection;
-            _resolution = null;
+            Transform.OnChanged -= MakeViewDirty;
+            Transform = transform;
+            Transform.OnChanged += MakeViewDirty;
         }
     }
 }

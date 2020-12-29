@@ -136,6 +136,7 @@ namespace Monorail.Renderer
 
             var positions = new Vector2[4];
             // Push the vertices to the batcher
+
             for (int i = 0; i < 4; i++)
             {
                 positions[i] = (rotMat * new Vector2(
@@ -144,10 +145,13 @@ namespace Monorail.Renderer
                 )) + transform.Position;
             }
 
-            _trianglesCalled += 2;
+            float minX = MathExtra.Min(positions[0].X, positions[1].X, positions[2].X, positions[3].X);
+            float minY = MathExtra.Min(positions[0].Y, positions[1].Y, positions[2].Y, positions[3].Y);
+            float maxX = MathExtra.Max(positions[0].X, positions[1].X, positions[2].X, positions[3].X);
+            float maxY = MathExtra.Max(positions[0].Y, positions[1].Y, positions[2].Y, positions[3].Y);
 
             // Check if quad is inside the camera bounds
-            if (!FrustumCullTest(new RectangleF(positions[0].X, positions[1].Y, positions[3].X - positions[0].X, positions[1].Y - positions[0].Y)))
+            if (!FrustumCullTest(new RectangleF(minX, minY, maxX - minX, maxY - minY)))
                 return;
 
             // Set the UV positions from texture source
@@ -192,6 +196,7 @@ namespace Monorail.Renderer
             _indexOffset += 4;
         }
 
+        // TODO: Add transform to triangle
         public static void DrawTriangle(Vector2[] positions, Color4[] colors, Texture2D texture = null, Vector2[] texCoordinates = null)
         {
             Insist.AssertEq(positions.Length, 3);
@@ -200,23 +205,20 @@ namespace Monorail.Renderer
                 Insist.AssertEq(texCoordinates.Length, 3);
 
             // Frustum culling test
-            for (int i = 0; i < 3; i++)
-            {
-                if (!FrustumCullTest(positions[i]))
-                    return;
-            }
+            float minX = MathExtra.Min(positions[0].X, positions[1].X, positions[2].X);
+            float minY = MathExtra.Min(positions[0].Y, positions[1].Y, positions[2].Y);
+            float maxX = MathExtra.Max(positions[0].X, positions[1].X, positions[2].X);
+            float maxY = MathExtra.Max(positions[0].Y, positions[1].Y, positions[2].Y);
+
+            float distX = maxX - minX;
+            float distY = maxY - minY;
+
+            if (!FrustumCullTest(new RectangleF(minX, minY, distX, distY)))
+                return;
 
             // Create texture coordinates
             if (texCoordinates == null)
             {
-                float minX = MathExtra.Min(positions[0].X, positions[1].X, positions[2].X);
-                float minY = MathExtra.Min(positions[0].Y, positions[1].Y, positions[2].Y);
-                float maxX = MathExtra.Max(positions[0].X, positions[1].X, positions[2].X);
-                float maxY = MathExtra.Max(positions[0].Y, positions[1].Y, positions[2].Y);
-
-                float distX = maxX - minX;
-                float distY = maxY - minY;
-
                 texCoordinates = new Vector2[3];
 
                 texCoordinates[0].X = (positions[0].X - minX) / distX;

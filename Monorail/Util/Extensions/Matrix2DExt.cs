@@ -181,5 +181,14 @@ namespace Monorail.Util
 		{
 			return matrix.M11 * matrix.M22 - matrix.M12 * matrix.M21;
 		}
+
+		public static Matrix4 ToMat4(in this Matrix2D matrix)
+        {
+			return new Matrix4(
+				matrix.M11, matrix.M12, 0, 0,
+				matrix.M21, matrix.M22, 0, 0,
+				0,			0,			1, 0,
+				matrix.M31, matrix.M32, 0, 1);
+        }
 	}
 }

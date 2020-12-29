@@ -3,7 +3,6 @@ using Monorail.ECS;
 using Monorail.Layers;
 using Monorail.Renderer;
 using OpenTK.Mathematics;
-using Monorail.Layers.ImGUI;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
@@ -45,7 +44,6 @@ namespace Monorail
             imguiLayer = new ImGuiLayer(this);
             layerStack.PushLayer(imguiLayer);
 
-
             // Create framebuffer
             Framebuffer = new Framebuffer(800, 600, FramebufferAttachements.All);
 
@@ -57,8 +55,6 @@ namespace Monorail
             quad.Parent = parent;
 
             camera = new Camera2D(parent);
-            //camera = new Camera2D(new Vector2(2, 2));
-            camera.Transform = new Transform2D();
 
             Test = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\blender2.83.png", new TextureBuilder()
             {
@@ -100,18 +96,12 @@ namespace Monorail
             RenderCommand.SetCaps(EnableCap.Blend);
 
             Renderer2D.Begin(camera);
-            //int x = -750;
-            //int y = -550;
-            //for (int i = 0; i < 100; i++)
-            //    for (int j = 0; j < 100; j++)
-            //        Renderer2D.DrawQuad(new Transform2D().SetPosition(new Vector2(x + i * 25, y + j * 25)).SetScale(20), new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, i % 2 == 0 ? Background : Test);
+
             Renderer2D.DrawElipse(parent, Color4.White, 200, Test);
             Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
             Renderer2D.DrawTriangle(
                 new Vector2[] { new Vector2(50, -150), new Vector2(200, 150), new Vector2(350, -150) },
                 new Color4[] { Color4.Red, Color4.Green, Color4.Blue }
-                //new Color4[] { Color4.White, Color4.White, Color4.White },
-                //Test
             );
 
             Renderer2D.End();
