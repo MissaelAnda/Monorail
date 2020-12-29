@@ -11,6 +11,8 @@ namespace Monorail.Renderer
 {
     public static class RenderCommand
     {
+        public static int DrawCalls { get; private set; } = 0;
+
         public static Color4 ClearColor
         {
             get => _clearColor;
@@ -47,6 +49,8 @@ namespace Monorail.Renderer
 
             //GL.Enable(EnableCap.FramebufferSrgb);
         }
+
+        public static void ResetDrawCalls() => DrawCalls = 0;
 
         public static void GLDebugCallback(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
         {
@@ -153,6 +157,7 @@ namespace Monorail.Renderer
 
             vao.Bind();
             GL.DrawElements(mode, elemCount, vao.IndexBuffer.ElementsType, offset);
+            DrawCalls++;
         }
 
         #region Viewport

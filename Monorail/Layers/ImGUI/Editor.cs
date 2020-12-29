@@ -1,4 +1,5 @@
 ﻿using ImGuiNET;
+using Monorail.Renderer;
 using Monorail.Util;
 using OpenTK.Mathematics;
 using ImVec2 = System.Numerics.Vector2;
@@ -19,7 +20,7 @@ namespace Monorail.Layers
 
             // Hierarchy
             ImGui.Begin("Hierarchy");
-            ImGui.Text("Hello world");
+            ImGui.Text($"Draw calls per frame: {RenderCommand.DrawCalls}");
             ImGui.End();
 
             // GameWindow

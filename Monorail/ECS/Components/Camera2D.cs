@@ -2,18 +2,16 @@
 using Monorail.Util;
 using Monorail.Debug;
 using System.Drawing;
-using Monorail.Layers;
 using Monorail.Renderer;
 using OpenTK.Mathematics;
 using Matrix2D = OpenTK.Mathematics.Matrix3x2;
-using System.ComponentModel.DataAnnotations;
 
 namespace Monorail.ECS
 {
     public class Camera2D
     {
-        private const float MaxZoom = 40f;
-        private const float MinZoom = 0.000000001f;
+        private const float MaxZoom = 2f;
+        private const float MinZoom = 0.1f;
 
         enum MatrixDirtyType
         {
@@ -33,7 +31,6 @@ namespace Monorail.ECS
                 if (res != _oldRes)
                 {
                     _dirtyType |= MatrixDirtyType.Projection;
-                    _origin = res / 2;
                     _oldRes = res;
                 }
                 return res;
@@ -41,18 +38,29 @@ namespace Monorail.ECS
             set => SetResolution(value);
         }
 
-        [Range(-1f, 1f)]
+        /// <summary>
+        /// Normalized zoom property in a range from -1 to 1, 0 = no zoom
+        /// </summary>
         public float Zoom
         {
-            get => (_zoom / MaxZoom) * 2 - 1;
-            set => Zoom = ((value + 1) / 2) * MaxZoom;
+            get
+            {
+                if (_zoom < 1f)
+                    return MathExtra.Map(_zoom, MinZoom, 1f, 1f, 0f);
+
+                return MathExtra.Map(_zoom, 1f, MaxZoom, 0f, -1f);
+            }
+            set => SetZoom(value);
         }
 
-        [Range(MinZoom, MaxZoom)]
+        /// <summary>
+        /// The raw zoom of the camera, this is the value used by the matrixes operations
+        /// it's in a range of 0.1(zoom in) to 2(zoom out)
+        /// </summary>
         public float RawZoom
         {
             get => _zoom;
-            set => _zoom = value;
+            set => SetRawZoom(value);
         }
 
         public RectangleF Bounds
@@ -140,7 +148,6 @@ namespace Monorail.ECS
 
         Vector2? _resolution = null;
         Vector2 _oldRes;
-        Vector2 _origin;
 
         float _zoom = 1f;
 
@@ -151,7 +158,6 @@ namespace Monorail.ECS
         {
             Transform = transform;
             Transform.OnChanged += MakeViewDirty;
-            _origin = Resolution / 2;
         }
 
         #region Fluent setters
@@ -160,7 +166,49 @@ namespace Monorail.ECS
         {
             _resolution = resolution;
             _dirtyType |= MatrixDirtyType.Projection;
-            _origin = resolution / 2;
+            return this;
+        }
+
+        /// <summary>
+        /// Fluent setter for the camera's zoom in a range of -1, 1 being 0 no zoom
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <returns></returns>
+        public Camera2D SetZoom(float zoom)
+        {
+            var newZoom = MathHelper.Clamp(zoom, -1, 1);
+
+            if (newZoom == 0)
+                newZoom = 1f;
+            else if (newZoom < 0)
+                newZoom = MathExtra.Map(newZoom, -1, 0, MaxZoom, 1);
+            else
+                newZoom = MathExtra.Map(newZoom, 0, 1, 1, MinZoom);
+
+            if (newZoom != _zoom)
+            {
+                _zoom = newZoom;
+                _dirtyType |= MatrixDirtyType.View;
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// Fluent setter for the zoom in a range between <cref>MinZoom</cref> and <cref>MaxZoom</cref>
+        /// </summary>
+        /// <param name="zoom"></param>
+        /// <returns>this</returns>
+        public Camera2D SetRawZoom(float zoom)
+        {
+            var newZoom = MathHelper.Clamp(zoom, MinZoom, MaxZoom);
+
+            if (_zoom != newZoom)
+            {
+                _zoom = newZoom;
+                _dirtyType |= MatrixDirtyType.View;
+            }
+
             return this;
         }
 

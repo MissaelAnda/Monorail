@@ -6,6 +6,7 @@ using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using Monorail.Debug;
 
 namespace Monorail
 {
@@ -72,6 +73,11 @@ namespace Monorail
 
             parent.Rotation += (float)args.Time;
 
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W))
+                camera.Zoom += (float)args.Time;
+            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S))
+                camera.Zoom -= (float)args.Time;
+
             // Should be processed in the ecs system
             // Shouldn't resize to 0,0 when minimized
             if (Framebuffer.Size != Editor.Viewport && !WindowState.HasFlag(WindowState.Minimized))
@@ -94,6 +100,7 @@ namespace Monorail
             RenderCommand.SetClearColor(ClearColor);
             RenderCommand.Clear();
             RenderCommand.SetCaps(EnableCap.Blend);
+            RenderCommand.ResetDrawCalls();
 
             Renderer2D.Begin(camera);
 

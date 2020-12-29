@@ -1,4 +1,6 @@
-﻿namespace Monorail.Math
+﻿using System.Runtime.CompilerServices;
+
+namespace Monorail.Math
 {
     public static class MathExtra
     {
@@ -189,5 +191,33 @@
         }
 
         #endregion
+
+        /// <summary>
+		/// mapps value (which is in the range leftMin - leftMax) to a value in the range rightMin - rightMax
+		/// </summary>
+		/// <param name="value">Value.</param>
+		/// <param name="leftMin">Left minimum.</param>
+		/// <param name="leftMax">Left max.</param>
+		/// <param name="rightMin">Right minimum.</param>
+		/// <param name="rightMax">Right max.</param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static double Map(double value, double leftMin, double leftMax, double rightMin, double rightMax)
+        {
+            return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+        }
+
+        /// <summary>
+		/// mapps value (which is in the range leftMin - leftMax) to a value in the range rightMin - rightMax
+		/// </summary>
+		/// <param name="value">Value.</param>
+		/// <param name="leftMin">Left minimum.</param>
+		/// <param name="leftMax">Left max.</param>
+		/// <param name="rightMin">Right minimum.</param>
+		/// <param name="rightMax">Right max.</param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float Map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+        {
+            return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+        }
     }
 }
