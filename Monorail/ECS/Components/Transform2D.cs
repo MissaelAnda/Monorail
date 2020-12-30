@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Monorail.Util;
 using OpenTK.Mathematics;
 using ImVec2 = System.Numerics.Vector2;
-using Matrix2D = System.Numerics.Matrix3x2;
+using Matrix2D = OpenTK.Mathematics.Matrix3x2;
 
 namespace Monorail.ECS
 {
@@ -189,9 +189,9 @@ namespace Monorail.ECS
         private float _rotation = 0f;
         private float _localRotation = 0f;
 
-        private Matrix2D localMatrix = Matrix2D.Identity;
-        private Matrix2D _worldMatrix = Matrix2D.Identity;
-        private Matrix2D _worldToLocalMatrix = Matrix2D.Identity;
+        private Matrix2D localMatrix = Matrix2DExt.Identity;
+        private Matrix2D _worldMatrix = Matrix2DExt.Identity;
+        private Matrix2D _worldToLocalMatrix = Matrix2DExt.Identity;
 
         #region fluent setters
 
@@ -258,7 +258,7 @@ namespace Monorail.ECS
             if (_parent == null)
                 LocalPosition = position;
             else
-                LocalPosition = ImVec2.Transform(position.ToImVec2(), WorldToLocalMatrix).ToVector2();
+                LocalPosition = Vector2Ext.Transform(position, WorldToLocalMatrix);
 
             return this;
         }
@@ -430,32 +430,32 @@ namespace Monorail.ECS
         {
             _dirty = false;
 
-            Matrix2D matrix = Matrix2D.Identity;
+            Matrix2D matrix = Matrix2DExt.Identity;
 
             if (_localScale != Vector2.One)
-                matrix *= Matrix2D.CreateScale(_scale.X, _scale.Y);
+                Matrix2D.CreateScale(_scale.X, _scale.Y, out matrix);
 
             if (_localRotation != 0)
-                matrix *= Matrix2D.CreateRotation(_rotation);
+                Matrix2DExt.Mult(matrix, Matrix2D.CreateRotation(_rotation), out matrix);
 
             var localPosition = LocalPosition;
             if (localPosition != Vector2.Zero)
-                matrix *= Matrix2D.CreateTranslation(localPosition.X, localPosition.Y);
+                Matrix2DExt.Mult(matrix, Matrix2DExt.CreateTranslation(localPosition.X, localPosition.Y), out matrix);
 
             localMatrix = matrix;
 
             if (_parent == null)
             {
                 _worldMatrix = localMatrix;
-                _worldToLocalMatrix = Matrix2D.Identity;
+                _worldToLocalMatrix = Matrix2DExt.Identity;
                 //Position = localPosition;
                 _scale = _localScale;
                 _rotation = _localRotation;
             }
             else
             {
-                _worldMatrix = localMatrix * _parent.WorldMatrix;
-                Matrix2D.Invert(_parent._worldMatrix, out _worldToLocalMatrix);
+                Matrix2DExt.Mult(localMatrix, _parent.WorldMatrix, out _worldMatrix);
+                Matrix2DExt.CreateInvert(_parent._worldMatrix, out _worldToLocalMatrix);
                 //Position = ImVec2.Transform(localPosition.ToImVec2(), parent.WorldMatrix).ToVector2();
                 _scale = _localScale * _parent.Scale;
                 _rotation = _localRotation + _parent.Rotation;

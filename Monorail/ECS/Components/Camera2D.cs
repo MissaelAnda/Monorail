@@ -8,10 +8,10 @@ using Matrix2D = OpenTK.Mathematics.Matrix3x2;
 
 namespace Monorail.ECS
 {
-    public class Camera2D
+    public class Camera2D : ICamera
     {
-        private const float MaxZoom = 2f;
-        private const float MinZoom = 0.1f;
+        private const float DefaultMaxZoom = 2f;
+        private const float DefaultMinZoom = 0.1f;
 
         enum MatrixDirtyType
         {
@@ -24,17 +24,7 @@ namespace Monorail.ECS
 
         public Vector2 Resolution
         {
-            get
-            {
-                // if the camera doesn't have a custom resolution it should use the viewport one
-                var res = _resolution.HasValue ? _resolution.Value : new Vector2(RenderCommand.Viewport.Width, RenderCommand.Viewport.Height);
-                if (res != _oldRes)
-                {
-                    _dirtyType |= MatrixDirtyType.Projection;
-                    _oldRes = res;
-                }
-                return res;
-            }
+            get => _resolution;
             set => SetResolution(value);
         }
 
@@ -61,6 +51,26 @@ namespace Monorail.ECS
         {
             get => _zoom;
             set => SetRawZoom(value);
+        }
+
+        public float MinZoom
+        {
+            get => _minZoom;
+            set
+            {
+                if (_zoom != value && value > 0 && value < 1 && value < _maxZoom)
+                    _zoom = value;
+            }
+        }
+
+        public float MaxZoom
+        {
+            get => _maxZoom;
+            set
+            {
+                if (_maxZoom != value && value > _minZoom && value > 1)
+                    _maxZoom = value;
+            }
         }
 
         public RectangleF Bounds
@@ -146,10 +156,11 @@ namespace Monorail.ECS
         MatrixDirtyType _dirtyType = MatrixDirtyType.Projection | MatrixDirtyType.View;
         bool _areBoundsDirty = false;
 
-        Vector2? _resolution = null;
-        Vector2 _oldRes;
+        Vector2 _resolution = new Vector2(App.Width, App.Height);
 
         float _zoom = 1f;
+        float _minZoom = DefaultMinZoom;
+        float _maxZoom = DefaultMaxZoom;
 
         internal Transform2D Transform;
 
@@ -164,8 +175,11 @@ namespace Monorail.ECS
 
         public Camera2D SetResolution(Vector2 resolution)
         {
-            _resolution = resolution;
-            _dirtyType |= MatrixDirtyType.Projection;
+            if (resolution != _resolution)
+            {
+                _resolution = resolution;
+                _dirtyType |= MatrixDirtyType.Projection;
+            }
             return this;
         }
 
@@ -220,12 +234,6 @@ namespace Monorail.ECS
             Update();
             Vector2Ext.Transform(ref origin, ref _inverseTransformMatrix, out screenPosition);
             return screenPosition;
-        }
-
-        public void UseDefaultResolution()
-        {
-            _dirtyType |= MatrixDirtyType.Projection;
-            _resolution = null;
         }
 
         void Update()
