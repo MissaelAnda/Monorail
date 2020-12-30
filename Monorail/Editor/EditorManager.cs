@@ -1,16 +1,18 @@
 ﻿using ImGuiNET;
-using Monorail.Renderer;
+using Monorail.ECS;
 using Monorail.Util;
+using Monorail.Renderer;
 using OpenTK.Mathematics;
 using ImVec2 = System.Numerics.Vector2;
+using Monorail.Input;
 
-namespace Monorail.Layers
+namespace Monorail.Editor
 {
-    public static class Editor
+    public static class EditorManager
     {
-        public static Vector2 Viewport { get; internal set; } = Vector2.Zero;
+        public static Scene CurrentScene;
+
         public static bool Enabled { get; internal set; } = false;
-        public static string text = "";
 
         public static void Process()
         {
@@ -21,16 +23,11 @@ namespace Monorail.Layers
             // Hierarchy
             ImGui.Begin("Hierarchy");
             ImGui.Text($"Draw calls per frame: {RenderCommand.DrawCalls}");
+            ImGui.Text($"Zoom: {CurrentScene.Camera.Zoom}");
             ImGui.End();
 
             // GameWindow
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new ImVec2(0, 0));
-            ImGui.Begin("World Viewport");
-            var viewPort = ImGui.GetContentRegionAvail();
-            Viewport = viewPort.ToVector2();
-            ImGui.Image(App.Framebuffer.Color, viewPort, new ImVec2(0, 1), new ImVec2(1, 0));
-            ImGui.End();
-            ImGui.PopStyleVar();
+            SceneViewport.Process();
             
 
             // WorldEditor

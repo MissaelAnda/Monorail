@@ -1,4 +1,5 @@
-﻿using Monorail.Layers.ImGUI;
+﻿using Monorail.Editor;
+using Monorail.Layers.ImGUI;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 
@@ -13,25 +14,27 @@ namespace Monorail.Layers
         {
             _window = window;
             _controller = new ImGuiController(_window.Size.X, _window.Size.Y);
-            Editor.SetupStyle();
+            EditorManager.SetupStyle();
         }
 
         public override void OnAttached()
         {
-            Editor.Enabled = true;
+            EditorManager.Enabled = true;
         }
 
         public override void OnDetached()
         {
-            Editor.Enabled = false;
+            EditorManager.Enabled = false;
         }
 
         public override void OnUpdate(double delta)
         {
             _controller.Update(_window, delta);
+
+
             
             //Layout specification here
-            Editor.Process();
+            EditorManager.Process();
         }
 
         public override void OnRender(double delta)

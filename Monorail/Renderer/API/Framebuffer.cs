@@ -2,6 +2,7 @@
 using Monorail.Debug;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
+using System.Runtime.CompilerServices;
 
 namespace Monorail.Renderer
 {
@@ -160,6 +161,10 @@ namespace Monorail.Renderer
 
             Invalidate();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Resize(Vector2 size)
+            => Resize((int)size.X, (int)size.Y);
 
 #if TODO
         public void ChangeAttachements(FramebufferAttachements newAttachements)

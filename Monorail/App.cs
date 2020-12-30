@@ -1,12 +1,13 @@
 ﻿using System;
 using Monorail.ECS;
 using Monorail.Layers;
+using Monorail.Editor;
 using Monorail.Renderer;
 using OpenTK.Mathematics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using Monorail.Debug;
+using Monorail.Input;
 
 namespace Monorail
 {
@@ -15,8 +16,6 @@ namespace Monorail
         LayerStack layerStack;
         Layer imguiLayer;
         Color4 ClearColor = Color4.CornflowerBlue;
-
-        public static Framebuffer Framebuffer;
 
         public static int Width { get; protected set; }
         public static int Height { get; protected set; }
@@ -36,6 +35,8 @@ namespace Monorail
             layerStack = new LayerStack(this);
 
             UpdateFrame += OnUpdate;
+
+            Mouse._window = this;
         }
 
         protected override void OnLoad()
@@ -45,9 +46,6 @@ namespace Monorail
             imguiLayer = new ImGuiLayer(this);
             layerStack.PushLayer(imguiLayer);
 
-            // Create framebuffer
-            Framebuffer = new Framebuffer(800, 600, FramebufferAttachements.All);
-
             parent = new Transform2D();
             quad = new Transform2D();
 
@@ -55,7 +53,12 @@ namespace Monorail
             quad.Scale = new Vector2(150, 100);
             quad.Parent = parent;
 
-            camera = new Camera2D(parent);
+            camera = new Camera2D(new Transform2D());
+            camera.MaxZoom = 5;
+            camera.MinZoom = 0.001f;
+            camera.Zoom = 0;
+
+            EditorManager.CurrentScene = new Scene2D(camera);
 
             Test = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\blender2.83.png", new TextureBuilder()
             {
@@ -72,16 +75,6 @@ namespace Monorail
             layerStack.Update(args.Time);
 
             parent.Rotation += (float)args.Time;
-
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.W))
-                camera.Zoom += (float)args.Time;
-            if (KeyboardState.IsKeyDown(OpenTK.Windowing.GraphicsLibraryFramework.Keys.S))
-                camera.Zoom -= (float)args.Time;
-
-            // Should be processed in the ecs system
-            // Shouldn't resize to 0,0 when minimized
-            if (Framebuffer.Size != Editor.Viewport && !WindowState.HasFlag(WindowState.Minimized))
-                Framebuffer.Resize((int)Editor.Viewport.X, (int)Editor.Viewport.Y);
         }
 
         protected override void OnRenderThreadStarted()
@@ -95,7 +88,7 @@ namespace Monorail
             RenderCommand.SetClearColor(new Color4(0.1f, 0.1f, 0.1f, 1.0f));
             RenderCommand.Clear();
 
-            Framebuffer.Bind();
+            EditorManager.CurrentScene.RenderTarget.Bind();
 
             RenderCommand.SetClearColor(ClearColor);
             RenderCommand.Clear();
@@ -113,7 +106,7 @@ namespace Monorail
 
             Renderer2D.End();
 
-            Framebuffer.Unbind();
+            EditorManager.CurrentScene.RenderTarget.Unbind();
 
             layerStack.Render(args.Time);
 

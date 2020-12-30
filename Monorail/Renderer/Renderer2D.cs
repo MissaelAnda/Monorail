@@ -79,10 +79,6 @@ namespace Monorail.Renderer
 
         static Camera2D _camera;
 
-        static int _trianglesBatched = 0;
-
-        static int _trianglesCalled = 0;
-
         static Dictionary<int, List<Vector2>> _elipsesCache = new Dictionary<int, List<Vector2>>(100);
 
         static Renderer2D()
@@ -186,7 +182,6 @@ namespace Monorail.Renderer
             // Batch them
             _trianglesBatcher.PushVertices(vertices);
 
-            _trianglesBatched += 2;
             // Add the 2 triangles indices
             _trianglesBatcher.PushIndices(
                 _indexOffset, _indexOffset + 1, _indexOffset + 2, // Bottom left triangle
@@ -367,9 +362,6 @@ namespace Monorail.Renderer
             Flush();
             _begun = false;
             _camera = null;
-
-            _trianglesBatched = 0;
-            _trianglesCalled = 0;
         }
 
         /// <summary>
