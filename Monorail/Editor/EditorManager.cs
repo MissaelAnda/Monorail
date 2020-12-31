@@ -19,15 +19,19 @@ namespace Monorail.Editor
             Dockspace();
 
             //ImGui.ShowStyleEditor();
+            SceneViewport.Process();
 
             // Hierarchy
+            var camera2D = (CurrentScene as Scene2D).Camera2D;
             ImGui.Begin("Hierarchy");
             ImGui.Text($"Draw calls per frame: {RenderCommand.DrawCalls}");
             ImGui.Text($"Zoom: {CurrentScene.Camera.Zoom}");
+            ImGui.Text($"Camera boundries: {camera2D.Bounds}");
+            ImGui.Text($"Camera position: {camera2D.Transform.Position}");
+            ImGui.Text($"Scene Viewport Size: {SceneViewport.Resolution}");
             ImGui.End();
 
             // GameWindow
-            SceneViewport.Process();
             
 
             // WorldEditor

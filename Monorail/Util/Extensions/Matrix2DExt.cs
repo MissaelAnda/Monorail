@@ -123,7 +123,7 @@ namespace Monorail.Util
 			result.M22 = matrix.M11 * det;
 
 			result.M31 = (matrix.M32 * matrix.M21 - matrix.M31 * matrix.M22) * det;
-			result.M32 = -(matrix.M32 * matrix.M11 - matrix.M31 * matrix.M12) * det;
+			result.M32 = (matrix.M31 * matrix.M12 - matrix.M11 * matrix.M32) * det;
 		}
 
 		/// <summary>
@@ -144,7 +144,7 @@ namespace Monorail.Util
 			result.M22 = matrix.M11 * det;
 
 			result.M31 = (matrix.M32 * matrix.M21 - matrix.M31 * matrix.M22) * det;
-			result.M32 = -(matrix.M32 * matrix.M11 - matrix.M31 * matrix.M12) * det;
+			result.M32 = (matrix.M31 * matrix.M12 - matrix.M11 * matrix.M32) * det;
 
 			return result;
 		}
@@ -167,7 +167,7 @@ namespace Monorail.Util
 			result.M22 = matrix.M11 * det;
 
 			result.M31 = (matrix.M32 * matrix.M21 - matrix.M31 * matrix.M22) * det;
-			result.M32 = -(matrix.M32 * matrix.M11 - matrix.M31 * matrix.M12) * det;
+			result.M32 = (matrix.M31 * matrix.M12 - matrix.M11 * matrix.M32) * det;
 
 			matrix = result;
 		}
@@ -179,7 +179,7 @@ namespace Monorail.Util
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static float Determinant(in this Matrix2D matrix)
 		{
-			return matrix.M11 * matrix.M22 - matrix.M12 * matrix.M21;
+			return (matrix.M11 * matrix.M22) - (matrix.M12 * matrix.M21);
 		}
 
 		public static Matrix4 ToMat4(in this Matrix2D matrix)

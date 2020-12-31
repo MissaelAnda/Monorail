@@ -48,9 +48,23 @@ namespace Monorail.Util
 		/// </summary>
 		/// <param name="position">Source <see cref="Vector2"/>.</param>
 		/// <param name="matrix">The transformation <see cref="Matrix"/>.</param>
+		/// <returns>Transformed <see cref="Vector2"/>.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Vector2 Transform(in this Vector2 position, in Matrix2D matrix)
+		{
+			return new Vector2((position.X * matrix.M11) + (position.Y * matrix.M21) + matrix.M31,
+				(position.X * matrix.M12) + (position.Y * matrix.M22) + matrix.M32);
+		}
+
+
+		/// <summary>
+		/// Creates a new <see cref="Vector2"/> that contains a transformation of 2d-vector by the specified <see cref="Matrix"/>.
+		/// </summary>
+		/// <param name="position">Source <see cref="Vector2"/>.</param>
+		/// <param name="matrix">The transformation <see cref="Matrix"/>.</param>
 		/// <param name="result">Transformed <see cref="Vector2"/> as an output parameter.</param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void Transform(ref Vector2 position, ref Matrix2D matrix, out Vector2 result)
+		public static void Transform(in Vector2 position, in Matrix2D matrix, out Vector2 result)
 		{
 			var x = (position.X * matrix.M11) + (position.Y * matrix.M21) + matrix.M31;
 			var y = (position.X * matrix.M12) + (position.Y * matrix.M22) + matrix.M32;
@@ -65,7 +79,7 @@ namespace Monorail.Util
 		/// <param name="position">Source <see cref="Vector2"/>.</param>
 		/// <param name="matrix">The transformation <see cref="Matrix"/>.</param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void Transform(ref this Vector2 vector, ref Vector2 position, ref Matrix2D matrix)
+		public static void Transform(ref this Vector2 vector, in Vector2 position, in Matrix2D matrix)
 		{
 			var x = (position.X * matrix.M11) + (position.Y * matrix.M21) + matrix.M31;
 			var y = (position.X * matrix.M12) + (position.Y * matrix.M22) + matrix.M32;
@@ -108,6 +122,34 @@ namespace Monorail.Util
 		public static void Transform(Vector2[] sourceArray, ref Matrix2D matrix, Vector2[] destinationArray)
 		{
 			Transform(sourceArray, 0, ref matrix, destinationArray, 0, sourceArray.Length);
+		}
+
+		/// <summary>
+		/// Apply transformation on all vectors within array of <see cref="Vector2"/> by the specified <see cref="Matrix4"/> and places the results in an another array.
+		/// </summary>
+		/// <param name="sourceArray">Source array.</param>
+		/// <param name="matrix">The transformation <see cref="Matrix4"/>.</param>
+		/// <param name="destinationArray">Destination array.</param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Vector2 Transform(in this Vector2 position, in Matrix4 matrix)
+        {
+			return new Vector2(
+				position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41,
+				position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42);
+		}
+
+		/// <summary>
+		/// Apply transformation on all vectors within array of <see cref="Vector2"/> by the specified <see cref="Matrix4"/> and places the results in an another array.
+		/// </summary>
+		/// <param name="sourceArray">Source array.</param>
+		/// <param name="matrix">The transformation <see cref="Matrix4"/>.</param>
+		/// <param name="destinationArray">Destination array.</param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void Transform(in Vector2 position, in Matrix4 matrix, out Vector2 newPosition)
+		{
+			newPosition = new Vector2(
+				position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41,
+				position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42);
 		}
 
 		/// <summary>

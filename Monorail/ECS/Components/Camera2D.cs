@@ -82,31 +82,32 @@ namespace Monorail.ECS
                 if (_areBoundsDirty)
                 {
                     // top-left and bottom-right are needed by either rotated or non-rotated bounds
+                    var bottomLeft = ScreenToWorldPoint(new Vector2(0, Resolution.Y));
                     var topLeft = ScreenToWorldPoint(new Vector2(0));
+                    var topRight = ScreenToWorldPoint(new Vector2(Resolution.X, 0));
                     var bottomRight = ScreenToWorldPoint(new Vector2(Resolution.X, Resolution.Y));
 
-                    if (Transform.Rotation != 0)
-                    {
-                        // special care for rotated bounds. we need to find our
-                        // absolute min/max values and create the bounds from that
-                        var topRight = ScreenToWorldPoint(new Vector2(Resolution.X, 0));
-                        var bottomLeft = ScreenToWorldPoint(new Vector2(0, Resolution.Y));
+                    var minX = MathExtra.Min(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
+                    var maxX = MathExtra.Max(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
+                    var minY = MathExtra.Min(topLeft.Y, bottomRight.Y, topRight.Y, bottomLeft.Y);
+                    var maxY = MathExtra.Max(topLeft.Y, bottomRight.Y, topRight.Y, bottomLeft.Y);
 
-                        var minX = MathExtra.Min(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
-                        var maxX = MathExtra.Max(topLeft.X, bottomRight.X, topRight.X, bottomLeft.X);
-                        var minY = MathExtra.Min(topLeft.Y, bottomRight.Y, topRight.Y, bottomLeft.Y);
-                        var maxY = MathExtra.Max(topLeft.Y, bottomRight.Y, topRight.Y, bottomLeft.Y);
+                    _bounds.Location = new PointF(minX, minY);
+                    _bounds.Width = maxX - minX;
+                    _bounds.Height = maxY - minY;
 
-                        _bounds.Location = new PointF(minX, minY);
-                        _bounds.Width = maxX - minX;
-                        _bounds.Height = maxY - minY;
-                    }
-                    else
-                    {
-                        _bounds.Location = new PointF(topLeft.X, topLeft.Y);
-                        _bounds.Width = bottomRight.X - topLeft.X;
-                        _bounds.Height = bottomRight.Y - topLeft.Y;
-                    }
+                    //if (Transform.Rotation != 0)
+                    //{
+                    //    // special care for rotated bounds. we need to find our
+                    //    // absolute min/max values and create the bounds from that
+                    //    
+                    //}
+                    //else
+                    //{
+                    //    _bounds.Location = new PointF(bottomLeft.X, bottomLeft.Y);
+                    //    _bounds.Width = topRight.X - bottomLeft.X;
+                    //    _bounds.Height = topRight.Y - bottomLeft.Y;
+                    //}
 
                     _areBoundsDirty = false;
                 }
@@ -232,8 +233,14 @@ namespace Monorail.ECS
         {
             var origin = screenPosition - Resolution / 2;
             Update();
-            Vector2Ext.Transform(ref origin, ref _inverseTransformMatrix, out screenPosition);
-            return screenPosition;
+            return origin.Transform(_transformMatrix);
+        }
+
+        public Point WorldToScreenPoint(Vector2 worldPosition)
+        {
+            Update();
+            Vector2Ext.Transform(worldPosition, _inverseTransformMatrix, out var res);
+            return new Point((int)res.X, (int)res.Y);
         }
 
         void Update()
@@ -271,7 +278,9 @@ namespace Monorail.ECS
             {
                 // Projection transform
                 var resolution = Resolution;
-                Matrix4.CreateOrthographic(resolution.X, resolution.Y, 0f, 1f, out _projection);
+                var sideWidth = resolution.X / 2;
+                var sideHeight = resolution.Y / 2;
+                Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, 0, 1, out _projection);
             }
 
             Matrix4.Mult(_view, _projection, out _projectionView);
