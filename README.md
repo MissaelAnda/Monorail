@@ -1,7 +1,7 @@
 # Monorail
 A simple 2D and 3D cross-platform game-engine made with DotNet Core using OpenGL 4.
 
-This is more of a learning project for computer graphics aiming to do the bare minimal needed for a game engine, nothing fancy here :P
+This is more of a learning project for computer graphics aiming to do the bare minimum needed for a game engine, nothing fancy here :P
 
 ## Roadmap
 - [x] 2D batch rendering
