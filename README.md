@@ -23,7 +23,7 @@ This is more of a learning project for computer graphics aiming to do the bare m
 - For console logging: [Colorful Console](https://github.com/tomakita/Colorful.Console)
 - For GUI: [ImGui.NET](https://github.com/mellinoe/imgui.net)
 
-## Acknoledgements
+## Inspiration
 - This game engine started as my own version of [Hazel](https://github.com/TheCherno/Hazel)
 - Also heavily inspired by the [Monogame Framework](https://www.monogame.net/) and [Nez](https://github.com/prime31/nez)
 - The usage design is inspired by [Godot](https://godotengine.org/) and [Unity](https://unity.com/)
