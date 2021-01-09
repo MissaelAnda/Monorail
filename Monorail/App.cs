@@ -36,6 +36,7 @@ namespace Monorail
             UpdateFrame += OnUpdate;
 
             Mouse._window = this;
+            Keyboard._window = this;
         }
 
         protected override void OnLoad()

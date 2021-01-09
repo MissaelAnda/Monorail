@@ -59,6 +59,13 @@ namespace Monorail.Editor
 
             EditorManager.CurrentScene.Resolution = Resolution;
 
+            if (Focused && Keyboard.IsKeyPressed(Keys.Q))
+            {
+                var camera = (EditorManager.CurrentScene as Scene2D).Camera2D;
+                camera.Transform.Position = Vector2.Zero;
+                camera.Zoom = 0;
+            }
+
             MouseProcess();
 
             ImGui.Image(EditorManager.CurrentScene.RenderTarget.Color, Resolution.ToImVec2(), new ImVec2(0, 1), new ImVec2(1, 0));

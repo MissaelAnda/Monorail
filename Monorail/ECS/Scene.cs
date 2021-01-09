@@ -31,6 +31,12 @@ namespace Monorail.ECS
 
         public virtual void DeleteEntity(Entity entity)
         {
+            var transform = _registry.GetComponent<Transform2D>(entity);
+            transform.Parent = null;
+
+            for (int i = 0; i < transform.Children.Count; i++)
+                DeleteEntity(transform.Children[i].Entity);
+
             _registry.DeleteEntity(entity);
         }
 
