@@ -5,6 +5,7 @@ using Monorail.Renderer;
 using OpenTK.Mathematics;
 using ImVec2 = System.Numerics.Vector2;
 using Monorail.Input;
+using Necs;
 
 namespace Monorail.Editor
 {
@@ -22,8 +23,13 @@ namespace Monorail.Editor
             SceneViewport.Process();
 
             // Hierarchy
+            Hierarchy.Process();
+
+            // Inspector
+            Inspector.Process();
+
             var camera2D = (CurrentScene as Scene2D).Camera2D;
-            ImGui.Begin("Hierarchy");
+            ImGui.Begin("Debug");
             ImGui.Text($"Draw calls per frame: {RenderCommand.DrawCalls}");
             ImGui.Text($"Zoom: {CurrentScene.Camera.Zoom}");
             ImGui.Text($"Camera boundries: {camera2D.Bounds}");

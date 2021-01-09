@@ -1,9 +1,6 @@
-﻿using Monorail.Renderer;
+﻿using Necs;
+using Monorail.Renderer;
 using OpenTK.Mathematics;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
 
 namespace Monorail.ECS
 {
@@ -22,9 +19,19 @@ namespace Monorail.ECS
 
         protected Vector2 _resolution;
 
+        internal Registry _registry = new Registry();
+
         public Scene()
         {
             RenderTarget = new Framebuffer(App.Width, App.Height, FramebufferAttachements.All);
+            _resolution = new Vector2(App.Width, App.Height);
+        }
+
+        public abstract Entity CreateEntity(Transform2D parent = null);
+
+        public virtual void DeleteEntity(Entity entity)
+        {
+            _registry.DeleteEntity(entity);
         }
 
         public virtual Scene SetResolution(Vector2 resolution)

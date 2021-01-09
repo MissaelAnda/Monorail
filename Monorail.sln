@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Monorail", "Monorail\Monorail.csproj", "{4F729AA2-DEF6-4203-8D21-421440568F07}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Necs", "Necs\Necs.csproj", "{D36EDA1D-B514-4D7F-A493-CADA5F33F6FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{4F729AA2-DEF6-4203-8D21-421440568F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F729AA2-DEF6-4203-8D21-421440568F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F729AA2-DEF6-4203-8D21-421440568F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D36EDA1D-B514-4D7F-A493-CADA5F33F6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D36EDA1D-B514-4D7F-A493-CADA5F33F6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D36EDA1D-B514-4D7F-A493-CADA5F33F6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D36EDA1D-B514-4D7F-A493-CADA5F33F6FC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

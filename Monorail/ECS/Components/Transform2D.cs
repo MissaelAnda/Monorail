@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Necs;
+using System;
 using Monorail.Util;
 using OpenTK.Mathematics;
-using ImVec2 = System.Numerics.Vector2;
+using System.Collections.Generic;
 using Matrix2D = OpenTK.Mathematics.Matrix3x2;
 
 namespace Monorail.ECS
@@ -10,6 +10,8 @@ namespace Monorail.ECS
     public class Transform2D
     {
         #region Public Properties
+
+        public readonly Entity Entity;
 
         /// <summary>
         /// An action called whenever the Transform is modified
@@ -64,7 +66,7 @@ namespace Monorail.ECS
         /// </summary>
         public Vector2 LocalPosition
         {
-            get => new Vector2(localMatrix.M31, localMatrix.M32);
+            get => new Vector2(_localMatrix.M31, _localMatrix.M32);
             set => SetLocalPosition(value);
         }
 
@@ -143,7 +145,7 @@ namespace Monorail.ECS
             {
                 if (_dirty)
                     Update();
-                return localMatrix;
+                return _localMatrix;
             }
         }
 
@@ -189,9 +191,11 @@ namespace Monorail.ECS
         private float _rotation = 0f;
         private float _localRotation = 0f;
 
-        private Matrix2D localMatrix = Matrix2DExt.Identity;
+        private Matrix2D _localMatrix = Matrix2DExt.Identity;
         private Matrix2D _worldMatrix = Matrix2DExt.Identity;
         private Matrix2D _worldToLocalMatrix = Matrix2DExt.Identity;
+
+        public Transform2D(in Entity entity) => Entity = entity;
 
         #region fluent setters
 
@@ -281,8 +285,8 @@ namespace Monorail.ECS
         {
             if (LocalPosition != position)
             {
-                localMatrix.M31 = position.X;
-                localMatrix.M32 = position.Y;
+                _localMatrix.M31 = position.X;
+                _localMatrix.M32 = position.Y;
                 MakeDirty();
             }
 
@@ -442,11 +446,11 @@ namespace Monorail.ECS
             if (localPosition != Vector2.Zero)
                 Matrix2DExt.Mult(matrix, Matrix2DExt.CreateTranslation(localPosition.X, localPosition.Y), out matrix);
 
-            localMatrix = matrix;
+            _localMatrix = matrix;
 
             if (_parent == null)
             {
-                _worldMatrix = localMatrix;
+                _worldMatrix = _localMatrix;
                 _worldToLocalMatrix = Matrix2DExt.Identity;
                 //Position = localPosition;
                 _scale = _localScale;
@@ -454,13 +458,12 @@ namespace Monorail.ECS
             }
             else
             {
-                Matrix2DExt.Mult(localMatrix, _parent.WorldMatrix, out _worldMatrix);
+                Matrix2DExt.Mult(_localMatrix, _parent.WorldMatrix, out _worldMatrix);
                 Matrix2DExt.CreateInvert(_parent._worldMatrix, out _worldToLocalMatrix);
                 //Position = ImVec2.Transform(localPosition.ToImVec2(), parent.WorldMatrix).ToVector2();
                 _scale = _localScale * _parent.Scale;
                 _rotation = _localRotation + _parent.Rotation;
             }
-
         }
 
         private void MakeDirty()
@@ -492,7 +495,7 @@ namespace Monorail.ECS
         /// <returns>The cloned transform</returns>
         public Transform2D Clone()
         {
-            var trans = new Transform2D();
+            var trans = new Transform2D(Entity);
 
             trans.LocalPosition = Position;
             trans._scale = trans._localScale = Scale;

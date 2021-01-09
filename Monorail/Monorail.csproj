@@ -22,7 +22,12 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
+    <Folder Include="ECS\Components\Renderables\" />
     <Folder Include="ECS\Systems\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Necs\Necs.csproj" />
   </ItemGroup>
 
 </Project>

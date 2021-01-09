@@ -8,6 +8,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using Monorail.Input;
+using Necs;
 
 namespace Monorail
 {
@@ -19,8 +20,6 @@ namespace Monorail
 
         public static int Width { get; protected set; }
         public static int Height { get; protected set; }
-
-        Camera2D camera;
 
         Transform2D parent;
         Transform2D quad;
@@ -46,19 +45,15 @@ namespace Monorail
             imguiLayer = new ImGuiLayer(this);
             layerStack.PushLayer(imguiLayer);
 
-            parent = new Transform2D();
-            quad = new Transform2D();
+            EditorManager.CurrentScene = new Scene2D();
+
+            var entity = EditorManager.CurrentScene.CreateEntity();
+            parent = EditorManager.CurrentScene._registry.GetComponent<Transform2D>(entity);
+            entity = EditorManager.CurrentScene.CreateEntity(parent);
+            quad = EditorManager.CurrentScene._registry.GetComponent<Transform2D>(entity);
 
             quad.Position = new Vector2(-200, 0);
             quad.Scale = new Vector2(150, 100);
-            quad.Parent = parent;
-
-            camera = new Camera2D(new Transform2D());
-            camera.MaxZoom = 5;
-            camera.MinZoom = 0.001f;
-            camera.Zoom = 0;
-
-            EditorManager.CurrentScene = new Scene2D(camera);
 
             Test = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\blender2.83.png", new TextureBuilder()
             {
@@ -95,7 +90,7 @@ namespace Monorail
             RenderCommand.SetCaps(EnableCap.Blend);
             RenderCommand.ResetDrawCalls();
 
-            Renderer2D.Begin(camera);
+            Renderer2D.Begin((EditorManager.CurrentScene as Scene2D).Camera2D);
 
             Renderer2D.DrawElipse(parent, Color4.White, 200, Test);
             Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
