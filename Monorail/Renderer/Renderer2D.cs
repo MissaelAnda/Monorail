@@ -109,6 +109,7 @@ namespace Monorail.Renderer
         public static void Begin(Camera2D camera)
         {
             Insist.AssertFalse(_begun, "Renderer has already begun.");
+            RenderCommand.ResetDrawCalls();
             _trianglesBatcher.Clear();
             _camera = camera;
             _shader.SetUniformMat4("u_Projection", false, camera.ProjectionView);
@@ -122,10 +123,8 @@ namespace Monorail.Renderer
         /// <param name="color">Each vertex color, must be exactly 4</param>
         /// <param name="texture">The texture to use</param>
         /// <param name="source">The texture source in UV space (Vertical inverted)</param>
-        public static void DrawQuad(Transform2D transform, Color4[] color, Texture2D texture = null, RectangleF? source = null)
+        public static void DrawQuad(Transform2D transform, Color4 color, float depth, Texture2D texture = null, RectangleF? source = null)
         {
-            Insist.AssertEq(color.Length, 4, "4 vertex color required");
-
             float cos = (float)MathHelper.Cos(transform.Rotation);
             float sin = (float)MathHelper.Sin(transform.Rotation);
             var rotMat = new Matrix2(cos, -sin, sin, cos);
@@ -154,21 +153,26 @@ namespace Monorail.Renderer
             var uvPositions = new Vector2[4];
             if (texture != null)
             {
+                float left = source?.X ?? 0;
+                float bottom = source?.Y ?? 0;
+                float right = source.HasValue ? source.Value.X + source.Value.Width : 1;
+                float top = source.HasValue ? source.Value.Y + source.Value.Height : 1;
+
                 // Bottom Left UV
-                uvPositions[0].X = source.HasValue ? source.Value.X : 0;
-                uvPositions[0].Y = source.HasValue ? 1f - source.Value.Height : 0;
+                uvPositions[0].X = left;
+                uvPositions[0].Y = bottom;
 
                 // Top Left UV
-                uvPositions[1].X = source.HasValue ? source.Value.X : 0;
-                uvPositions[1].Y = source.HasValue ? 1f - source.Value.Y : 1;
+                uvPositions[1].X = left;
+                uvPositions[1].Y = top;
 
                 // Top Right UV
-                uvPositions[2].X = source.HasValue ? source.Value.Width : 1;
-                uvPositions[2].Y = source.HasValue ? 1f - source.Value.Y : 1;
+                uvPositions[2].X = right;
+                uvPositions[2].Y = top;
 
                 // Bottom Right UV
-                uvPositions[3].X = source.HasValue ? source.Value.Width : 1;
-                uvPositions[3].Y = source.HasValue ? 1f - source.Value.Height : 0;
+                uvPositions[3].X = right;
+                uvPositions[3].Y = bottom;
             }
 
             // Queue texture
@@ -177,7 +181,7 @@ namespace Monorail.Renderer
             // Create the vertecies
             var vertices = new Vertex2D[4];
             for (int i = 0; i < 4; i++)
-                vertices[i] = new Vertex2D(positions[i].ToVector3(), color[i], uvPositions[i], texPos);
+                vertices[i] = new Vertex2D(positions[i].ToVector3(depth), color, uvPositions[i], texPos);
 
             // Batch them
             _trianglesBatcher.PushVertices(vertices);

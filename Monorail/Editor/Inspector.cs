@@ -2,10 +2,10 @@
 using System;
 using ImGuiNET;
 using Monorail.ECS;
+using Monorail.Input;
 using ImVec2 = System.Numerics.Vector2;
 using ImVec3 = System.Numerics.Vector3;
 using ImVec4 = System.Numerics.Vector4;
-using Monorail.Input;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace Monorail.Editor
@@ -18,10 +18,14 @@ namespace Monorail.Editor
         {
             ImGui.Begin("Inspector");
             var entity = Hierarchy.SelectedEntity;
-            if (entity.IsValid())
+            if (entity.IsValid)
             {
                 Tag(entity);
                 Transform2DInspector.Inspect(entity);
+
+                // remove redundancy
+                if (EditorManager.CurrentScene._registry.HasComponent<SpriteRenderer>(entity))
+                    SpriteRendererInspector.Inspect(EditorManager.CurrentScene._registry.GetComponent<SpriteRenderer>(entity));
             }
             else ImGui.Text("None entity selected");
             ImGui.End();

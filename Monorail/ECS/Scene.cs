@@ -17,6 +17,8 @@ namespace Monorail.ECS
 
         public ICamera Camera { get; protected set; }
 
+        public Color4 ClearColor = Color4.AliceBlue;
+
         protected Vector2 _resolution;
 
         internal Registry _registry = new Registry();
@@ -27,18 +29,13 @@ namespace Monorail.ECS
             _resolution = new Vector2(App.Width, App.Height);
         }
 
-        public abstract Entity CreateEntity(Transform2D parent = null);
+        public abstract Entity CreateEntity(Entity? parent = null);
 
-        public virtual void DeleteEntity(Entity entity)
-        {
-            var transform = _registry.GetComponent<Transform2D>(entity);
-            transform.Parent = null;
+        public abstract void DeleteEntity(Entity entity);
 
-            for (int i = 0; i < transform.Children.Count; i++)
-                DeleteEntity(transform.Children[i].Entity);
+        public abstract void Update(float delta);
 
-            _registry.DeleteEntity(entity);
-        }
+        public abstract void Render(float delta);
 
         public virtual Scene SetResolution(Vector2 resolution)
         {

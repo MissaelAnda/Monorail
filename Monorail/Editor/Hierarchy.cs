@@ -43,7 +43,7 @@ namespace Monorail.Editor
                     .GetView(typeof(Transform2D), typeof(TagComponent)).Each(Entities);
 
                 // To delete
-                if (ToDelete.IsValid())
+                if (ToDelete.IsValid)
                     DeleteDialog();
 
                 ImGui.End();
@@ -90,7 +90,7 @@ namespace Monorail.Editor
             if (ImGui.BeginPopupContextItem())
             {
                 if (ImGui.Selectable("Create Child Entity"))
-                    EditorManager.CurrentScene.CreateEntity(transform);
+                    EditorManager.CurrentScene.CreateEntity(transform.Entity);
                 if (ImGui.Selectable("Delete"))
                     ToDelete = transform.Entity;
                 ImGui.EndPopup();

@@ -107,6 +107,7 @@ namespace Monorail.Editor
 
                 ImGui.PopStyleVar();
                 ImGui.PopItemWidth();
+                ImGui.Columns(1);
 
                 ImGui.TreePop();
             }

@@ -280,7 +280,7 @@ namespace Monorail.ECS
                 var resolution = Resolution;
                 var sideWidth = resolution.X / 2;
                 var sideHeight = resolution.Y / 2;
-                Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, 0, 1, out _projection);
+                Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, -1, 1, out _projection);
             }
 
             Matrix4.Mult(_view, _projection, out _projectionView);

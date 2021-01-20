@@ -184,6 +184,16 @@ namespace Monorail.Util
 			return new Vector3(vec.X, vec.Y, 0);
 		}
 
+		/// <summary>
+		/// Creates a new vector 3 with the given value in Z
+		/// </summary>
+		/// <param name="vec"></param>
+		/// <returns>The new vector</returns>
+		public static Vector3 ToVector3(this Vector2 vec, float z)
+		{
+			return new Vector3(vec.X, vec.Y, z);
+		}
+
 		public static ImVec2 ToImVec2(this Vector2 vec)
 			=> new ImVec2(vec.X, vec.Y);
 	}

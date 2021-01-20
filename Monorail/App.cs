@@ -16,7 +16,6 @@ namespace Monorail
     {
         LayerStack layerStack;
         Layer imguiLayer;
-        Color4 ClearColor = Color4.CornflowerBlue;
 
         public static int Width { get; protected set; }
         public static int Height { get; protected set; }
@@ -26,6 +25,8 @@ namespace Monorail
 
         Texture2D Test;
         Texture2D Background;
+
+        Scene _currentScene;
 
         public App() : base(GameWindowSettings.Default, new NativeWindowSettings() { APIVersion = new Version(4, 5) })
         {
@@ -46,16 +47,6 @@ namespace Monorail
             imguiLayer = new ImGuiLayer(this);
             layerStack.PushLayer(imguiLayer);
 
-            EditorManager.CurrentScene = new Scene2D();
-
-            var entity = EditorManager.CurrentScene.CreateEntity();
-            parent = EditorManager.CurrentScene._registry.GetComponent<Transform2D>(entity);
-            entity = EditorManager.CurrentScene.CreateEntity(parent);
-            quad = EditorManager.CurrentScene._registry.GetComponent<Transform2D>(entity);
-
-            quad.Position = new Vector2(-200, 0);
-            quad.Scale = new Vector2(150, 100);
-
             Test = Texture2D.FromPath("C:\\Users\\guita\\Pictures\\blender2.83.png", new TextureBuilder()
             {
                 GenerateMipmaps = true,
@@ -64,13 +55,37 @@ namespace Monorail
             {
                 GenerateMipmaps = true,
             });
+
+            _currentScene = new Scene2D();
+            _currentScene.ClearColor = Color4.DarkSlateGray;
+            EditorManager.CurrentScene = _currentScene;
+
+            Registry registry = EditorManager.CurrentScene._registry;
+
+            var entity = EditorManager.CurrentScene.CreateEntity();
+            parent = registry.GetComponent<Transform2D>(entity);
+            var sprite = new SpriteRenderer(Test);
+            sprite.Sprite.Source = new System.Drawing.Rectangle(200, 200, 1000, 500);
+            registry.AddComponent(entity, sprite);
+            
+            entity = EditorManager.CurrentScene.CreateEntity(entity);
+            quad = registry.GetComponent<Transform2D>(entity);
+            registry.AddComponent(entity, new SpriteRenderer(Background));
+
+            parent.Scale = new Vector2(500, 400);
+            quad.Position = new Vector2(0.8f, 0);
+            quad.Scale = new Vector2(.8f, .5f);
         }
 
         protected void OnUpdate(FrameEventArgs args)
         {
             layerStack.Update(args.Time);
+            float delta = (float)args.Time;
 
-            parent.Rotation += (float)args.Time;
+            _currentScene.Update(delta);
+
+            // TODO: Remove
+            parent.Rotation += delta;
         }
 
         protected override void OnRenderThreadStarted()
@@ -84,25 +99,8 @@ namespace Monorail
             RenderCommand.SetClearColor(new Color4(0.1f, 0.1f, 0.1f, 1.0f));
             RenderCommand.Clear();
 
-            EditorManager.CurrentScene.RenderTarget.Bind();
-
-            RenderCommand.SetClearColor(ClearColor);
-            RenderCommand.Clear();
-            RenderCommand.SetCaps(EnableCap.Blend);
-            RenderCommand.ResetDrawCalls();
-
-            Renderer2D.Begin((EditorManager.CurrentScene as Scene2D).Camera2D);
-
-            Renderer2D.DrawElipse(parent, Color4.White, 200, Test);
-            Renderer2D.DrawQuad(quad, new Color4[] { Color4.White, Color4.White, Color4.White, Color4.White }, Background);
-            Renderer2D.DrawTriangle(
-                new Vector2[] { new Vector2(50, -150), new Vector2(200, 150), new Vector2(350, -150) },
-                new Color4[] { Color4.Red, Color4.Green, Color4.Blue }
-            );
-
-            Renderer2D.End();
-
-            EditorManager.CurrentScene.RenderTarget.Unbind();
+            float delta = (float)args.Time;
+            EditorManager.CurrentScene.Render(delta);
 
             layerStack.Render(args.Time);
 
