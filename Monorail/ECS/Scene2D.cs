@@ -57,7 +57,8 @@ namespace Monorail.ECS
             RenderTarget.Bind();
 
             RenderCommand.SetClearColor(ClearColor);
-            RenderCommand.SetCaps(EnableCap.Blend);
+            RenderCommand.SetCaps(EnableCap.Blend, EnableCap.DepthTest);
+            RenderCommand.SetClearMasks(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             RenderCommand.Clear();
 
             Renderer2D.Begin(Camera2D);

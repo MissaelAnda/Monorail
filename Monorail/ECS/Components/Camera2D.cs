@@ -95,20 +95,6 @@ namespace Monorail.ECS
                     _bounds.Location = new PointF(minX, minY);
                     _bounds.Width = maxX - minX;
                     _bounds.Height = maxY - minY;
-
-                    //if (Transform.Rotation != 0)
-                    //{
-                    //    // special care for rotated bounds. we need to find our
-                    //    // absolute min/max values and create the bounds from that
-                    //    
-                    //}
-                    //else
-                    //{
-                    //    _bounds.Location = new PointF(bottomLeft.X, bottomLeft.Y);
-                    //    _bounds.Width = topRight.X - bottomLeft.X;
-                    //    _bounds.Height = topRight.Y - bottomLeft.Y;
-                    //}
-
                     _areBoundsDirty = false;
                 }
 
@@ -280,7 +266,7 @@ namespace Monorail.ECS
                 var resolution = Resolution;
                 var sideWidth = resolution.X / 2;
                 var sideHeight = resolution.Y / 2;
-                Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, -1, 1, out _projection);
+                Matrix4.CreateOrthographicOffCenter(-sideWidth, sideWidth, -sideHeight, sideHeight, -1.1f, 1.1f, out _projection);
             }
 
             Matrix4.Mult(_view, _projection, out _projectionView);
