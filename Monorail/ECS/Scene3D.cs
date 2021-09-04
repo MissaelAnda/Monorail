@@ -1,37 +1,35 @@
 ﻿using Necs;
+using System;
 using Monorail.Renderer;
 using OpenTK.Graphics.OpenGL4;
 
 namespace Monorail.ECS
 {
-    public class Scene2D : Scene
+    public class Scene3D : Scene
     {
-        public Camera2D Camera2D => Camera as Camera2D;
+        public Camera3D Camera3D => Camera as Camera3D;
 
-        public Scene2D()
+        public Scene3D()
         {
-            // Editor camera must only be added in edit mode
             var editorCameraEntity = _registry.CreateEntity();
 
-            var cameraTransform = new Transform2D(editorCameraEntity);
-            var editorCamera = new Camera2D(cameraTransform);
-            editorCamera.MaxZoom = 10;
+            var cameraTransform = new Transform(editorCameraEntity);
+            var editorCamera = new Camera3D(cameraTransform);
 
             _registry.AddComponent(editorCameraEntity, cameraTransform);
             _registry.AddComponent(editorCameraEntity, editorCamera);
             Camera = editorCamera;
 
-            // TODO: Cambiar ciclo de vida
             OnLoad();
         }
 
-        public override Entity CreateEntity(Entity? parent = null)
+        public sealed override Entity CreateEntity(Entity? parent = null)
         {
             var entity = _registry.CreateEntity();
 
-            var transform = new Transform2D(entity);
+            var transform = new Transform(entity);
             if (parent.HasValue)
-                transform.Parent = _registry.GetComponent<Transform2D>(parent.Value);
+                transform.Parent = _registry.GetComponent<Transform>(parent.Value);
 
             _registry.AddComponent(entity, transform);
             _registry.AddComponent(entity, new TagComponent("GameObject"));
@@ -39,9 +37,9 @@ namespace Monorail.ECS
             return entity;
         }
 
-        public override void DeleteEntity(Entity entity)
+        public sealed override void DeleteEntity(Entity entity)
         {
-            var transform = _registry.GetComponent<Transform2D>(entity);
+            var transform = _registry.GetComponent<Transform>(entity);
             transform.Parent = null;
 
             for (int i = 0; i < transform.Children.Count; i++)
@@ -50,13 +48,10 @@ namespace Monorail.ECS
             _registry.DeleteEntity(entity);
         }
 
-        public sealed override void Update(float delta)
+        public sealed override void Render(float delta)
         {
-            OnUpdate(delta);
-        }
+            BeforeRender(delta);
 
-        public override void Render(float delta)
-        {
             RenderTarget.Bind();
 
             RenderCommand.SetClearColor(ClearColor);
@@ -64,18 +59,21 @@ namespace Monorail.ECS
             RenderCommand.SetClearMasks(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             RenderCommand.Clear();
 
-            BeforeRender(delta);
-
-            Renderer2D.Begin(Camera2D);
-            foreach (var entity in _registry.GetView(typeof(SpriteRenderer), typeof(Transform2D)).Each())
+            Renderer3D.Begin(Camera3D);
+            foreach (var (mesh, transform) in _registry.GetView(typeof(MeshRenderer), typeof(Transform)).Unpack<MeshRenderer, Transform>())
             {
-                entity.Get<SpriteRenderer>().Render(entity.Get<Transform2D>());
+                Renderer3D.DrawMesh(mesh, transform);
             }
-            Renderer2D.End();
-
-            AfterRender(delta);
+            Renderer3D.End();
 
             RenderTarget.Unbind();
+
+            AfterRender(delta);
+        }
+
+        public sealed override void Update(float delta)
+        {
+            OnUpdate(delta);
         }
     }
 }

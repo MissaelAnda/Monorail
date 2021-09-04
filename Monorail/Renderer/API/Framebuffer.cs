@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 namespace Monorail.Renderer
 {
     [Flags]
-    public enum FramebufferAttachements
+    public enum ColorAttachements
     {
         Color,
         Depth,
@@ -77,7 +77,7 @@ namespace Monorail.Renderer
 
         public Vector2i Size => new Vector2i(Width, Height);
 
-        public FramebufferAttachements Attachements
+        public ColorAttachements Attachements
         {
             get => _attachements;
         }
@@ -85,11 +85,11 @@ namespace Monorail.Renderer
         public Texture2D Color { get; protected set; }
         public Texture2D DepthStencil { get; protected set; }
         FramebufferTarget _target = FramebufferTarget.Framebuffer;
-        FramebufferAttachements _attachements;
+        ColorAttachements _attachements;
 
         int _width, _height;
 
-        public Framebuffer(int width, int height, FramebufferAttachements attachements = FramebufferAttachements.Color)
+        public Framebuffer(int width, int height, ColorAttachements attachements = ColorAttachements.Color)
         {
             Insist.Assert(width > 0);
             Insist.Assert(height > 0);
@@ -122,7 +122,7 @@ namespace Monorail.Renderer
             if (_id <= 0)
                 throw new OpenGLResourceCreationException(ResourceType.Framebuffer);
 
-            if (_attachements.HasFlag(FramebufferAttachements.Color))
+            if (_attachements.HasFlag(ColorAttachements.Color))
             {
                 Color = new Texture2D(_width, _height, new TextureBuilder());
                 GL.NamedFramebufferTexture(_id, FramebufferAttachment.ColorAttachment0, Color.ID, 0);
@@ -133,12 +133,12 @@ namespace Monorail.Renderer
                 GL.NamedFramebufferReadBuffer(_id, ReadBufferMode.None);
             }
 
-            if (_attachements.HasFlag(FramebufferAttachements.DepthStencil))
+            if (_attachements.HasFlag(ColorAttachements.DepthStencil))
             {
                 DepthStencil = new Texture2D(_width, _height, DepthStencilTextureBuilder);
                 GL.NamedFramebufferTexture(_id, FramebufferAttachment.DepthStencilAttachment, DepthStencil.ID, 0);
             }
-            else if (_attachements.HasFlag(FramebufferAttachements.Depth))
+            else if (_attachements.HasFlag(ColorAttachements.Depth))
             {
                 DepthStencil = new Texture2D(_width, _height, DepthTextureBuilder);
                 GL.NamedFramebufferTexture(_id, FramebufferAttachment.DepthAttachment, DepthStencil.ID, 0);
@@ -153,8 +153,8 @@ namespace Monorail.Renderer
 
         public void Resize(int width, int height)
         {
-            Insist.Assert(width > 0);
-            Insist.Assert(height > 0);
+            Insist.Assert(width > 0, "Framebuffer must be wider than 0px.");
+            Insist.Assert(height > 0, "Framebuffer must be larger than 0px.");
 
             _width = width;
             _height = height;
@@ -163,8 +163,10 @@ namespace Monorail.Renderer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Resize(Vector2 size)
-            => Resize((int)size.X, (int)size.Y);
+        public void Resize(Vector2 size) => Resize((int)size.X, (int)size.Y);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Resize(Vector2i size) => Resize(size.X, size.Y);
 
 #if TODO
         public void ChangeAttachements(FramebufferAttachements newAttachements)

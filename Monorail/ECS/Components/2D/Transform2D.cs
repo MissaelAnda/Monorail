@@ -413,7 +413,7 @@ namespace Monorail.ECS
         {
             if (_localRotation != radians)
             {
-                _localRotation = radians;
+                _localRotation = radians % (MathF.PI * 2);
                 MakeDirty();
             }
 

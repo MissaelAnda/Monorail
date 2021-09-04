@@ -21,7 +21,7 @@ namespace Monorail.Editor
             if (entity.IsValid)
             {
                 Tag(entity);
-                Transform2DInspector.Inspect(entity);
+                TransformInspector.Inspect(entity);
 
                 // remove redundancy
                 if (EditorManager.CurrentScene._registry.HasComponent<SpriteRenderer>(entity))
@@ -60,7 +60,7 @@ namespace Monorail.Editor
             var buttonSize = new ImVec2(lineHeight + 3, lineHeight);
 
             // X var
-            FloatDrag($"##X{label}", ref vector.X, () => reset.X, buttonSize, new ImVec3[] {
+            FloatDrag($"X#{label}", ref vector.X, () => reset.X, buttonSize, new ImVec3[] {
                 new ImVec3(216f / 255f, 52f / 255f, 95f / 255f),
                 new ImVec3(196f / 255f, 32f / 255f, 75f / 255f),
                 new ImVec3(236f / 255f, 72f / 255f, 115f / 255f)
@@ -68,7 +68,7 @@ namespace Monorail.Editor
 
             // Y var
             ImGui.SameLine();
-            FloatDrag($"##Y{label}", ref vector.Y, () => reset.Y, buttonSize, new ImVec3[]
+            FloatDrag($"Y#{label}", ref vector.Y, () => reset.Y, buttonSize, new ImVec3[]
             {
                 new ImVec3(1f, 214f / 255f, 107f / 255f),
                 new ImVec3(1f, 234f / 255f, 127f / 255f),
@@ -77,7 +77,7 @@ namespace Monorail.Editor
 
             // Z var
             ImGui.SameLine();
-            FloatDrag($"##Z{label}", ref vector.Z, () => reset.Z, buttonSize, new ImVec3[]
+            FloatDrag($"Z#{label}", ref vector.Z, () => reset.Z, buttonSize, new ImVec3[]
             {
                 new ImVec3(88f / 255f, 141f / 255f, 168f / 255f),
                 new ImVec3(108f / 255f, 161f / 255f, 188f / 255f),

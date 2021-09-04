@@ -17,7 +17,7 @@ namespace Monorail.ECS
 
         public ICamera Camera { get; protected set; }
 
-        public Color4 ClearColor = Color4.AliceBlue;
+        public Color4 ClearColor = Color4.DarkGray;
 
         protected Vector2 _resolution;
 
@@ -25,7 +25,7 @@ namespace Monorail.ECS
 
         public Scene()
         {
-            RenderTarget = new Framebuffer(App.Width, App.Height, FramebufferAttachements.All);
+            RenderTarget = new Framebuffer(App.Width, App.Height, ColorAttachements.All);
             _resolution = new Vector2(App.Width, App.Height);
         }
 
@@ -48,5 +48,24 @@ namespace Monorail.ECS
 
             return this;
         }
+
+        #region Scene Lifecycle
+
+        public virtual void OnLoad()
+        { }
+
+        public virtual void OnUpdate(float delta)
+        { }
+
+        public virtual void BeforeRender(float delta)
+        { }
+
+        public virtual void AfterRender(float delta)
+        { }
+
+        public virtual void OnUnload()
+        { }
+
+        #endregion
     }
 }

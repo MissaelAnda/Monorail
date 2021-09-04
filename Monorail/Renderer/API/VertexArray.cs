@@ -234,9 +234,9 @@ namespace Monorail.Renderer
 
     public class VertexLayout
     {
-        List<VertexAttrib> _attribs = new List<VertexAttrib>();
+        public List<VertexAttrib> Attribs { get; protected set; } = new List<VertexAttrib>();
 
-        public int AttibsLenght => _attribs.Count;
+        public int AttibsLenght => Attribs.Count;
 
         public int Stride { get; protected set; } = 0;
 
@@ -245,76 +245,66 @@ namespace Monorail.Renderer
         public VertexLayout AddAttrib(VertexAttrib attrib)
         {
             Stride += attrib.Stride;
-            _attribs.Add(attrib);
+            Attribs.Add(attrib);
 
             return this;
-        }
-
-        public void SetAttribs(VertexArray vao)
-        {
-            int offset = 0;
-            for (int i = 0; i < _attribs.Count; i++)
-            {
-                GL.EnableVertexArrayAttrib(vao.ID, i);
-                GL.VertexArrayAttribBinding(vao.ID, i, 0);
-                GL.VertexArrayAttribFormat(vao.ID, i, _attribs[i].ElementsCount, _attribs[i].AttribType, _attribs[i].Normalized, offset);
-
-                offset += _attribs[i].Stride;
-            }
         }
     }
 
 
     public class VertexArray : OpenGLResource
     {
-        public static int CurrentlyBinded { get; private set; } = 0;
+        static Dictionary<string, VertexArray> _layouts = new Dictionary<string, VertexArray>();
 
-        static Dictionary<string, VertexLayout> _layouts = new Dictionary<string, VertexLayout>();
+        private readonly VertexLayout _vertexLayout;
 
-        public VertexBuffer VertexBuffer { get; protected set; }
+        private int _currentMaxBinding = 0;
 
-        public IndexBuffer IndexBuffer { get; protected set; }
-
-        public VertexLayout VertexLayout { get; protected set; }
-
-        public VertexArray(string vertexLayoutName, VertexBuffer vertexBuffer, IndexBuffer indexBuffer = null)
+        public static void AddVertexLayout(string name, VertexLayout layout)
         {
-            Insist.Assert(_layouts.ContainsKey(vertexLayoutName), "The vertex layout '{0}' doesn't exists.", vertexLayoutName);
-            Insist.AssertNotNull(vertexBuffer, "Vertex buffer is required");
+            Insist.AssertFalse(_layouts.ContainsKey(name), "A layout with the name '{0}' already exists.", name);
+            Insist.Assert(layout.AttibsLenght > 0, "Layout can't be empty.");
 
+            var vao = new VertexArray(layout);
+
+            _layouts.Add(name, vao);
+        }
+
+        public static void BindVertexBuffer(string name, VertexBuffer vbo)
+        {
+            if (!_layouts.TryGetValue(name, out var vao))
+                throw new Exception($"Vertex Array Object with name '{name}' not found.");
+
+            vao.BindVertexBuffer(vbo);
+        }
+
+        private VertexArray(VertexLayout vertexLayout)
+        {
             GL.CreateVertexArrays(1, out _id);
             if (_id <= 0)
                 throw new OpenGLResourceCreationException(ResourceType.VertexArray);
 
-            // Create VAO bindings
-            _layouts.TryGetValue(vertexLayoutName, out var vertexLayout);
-            VertexLayout = vertexLayout;
+            int offset = 0;
+            for (int i = 0; i < vertexLayout.AttibsLenght; i++)
+            {
+                GL.EnableVertexArrayAttrib(_id, i);
+                GL.VertexArrayAttribFormat(
+                    _id, i, vertexLayout.Attribs[i].ElementsCount,
+                    vertexLayout.Attribs[i].AttribType,
+                    vertexLayout.Attribs[i].Normalized, offset
+                );
 
-            GL.VertexArrayVertexBuffer(_id, 0, vertexBuffer.ID, IntPtr.Zero, VertexLayout.Stride);
-            if(indexBuffer != null)
-                GL.VertexArrayElementBuffer(_id, indexBuffer.ID);
+                offset += vertexLayout.Attribs[i].Stride;
+            }
 
-            VertexLayout.SetAttribs(this);
-
-            VertexBuffer = vertexBuffer;
-            IndexBuffer = indexBuffer;
+            _vertexLayout = vertexLayout;
         }
 
         public void Bind()
         {
-            if (CurrentlyBinded != _id)
+            if (!_disposed)
             {
-                GL.BindVertexArray(ID);
-                CurrentlyBinded = ID;
-            }
-        }
-
-        public void Unbind()
-        {
-            if (CurrentlyBinded == _id)
-            {
-                GL.BindVertexArray(0);
-                CurrentlyBinded = 0;
+                GL.BindVertexArray(_id);
             }
         }
 
@@ -322,22 +312,22 @@ namespace Monorail.Renderer
         {
             if (!_disposed)
             {
-                Unbind();
-
-                VertexBuffer.Dispose();
-                IndexBuffer.Dispose();
-
                 GL.DeleteVertexArray(_id);
                 base.Dispose();
             }
         }
 
-        public static void AddVertexLayout(string name, VertexLayout layout)
+        private void BindVertexBuffer(VertexBuffer vbo)
         {
-            Insist.AssertFalse(_layouts.ContainsKey(name), "A layout with the name '{0}' already exists.", name);
-            Insist.Assert(layout.AttibsLenght > 0, "Layout can't be empty.");
+            var next = _currentMaxBinding++;
 
-            _layouts.Add(name, layout);
+            vbo.VAO = this;
+            GL.VertexArrayVertexBuffer(_id, next, vbo.ID, IntPtr.Zero, _vertexLayout.Stride);
+
+            for (int i = 0; i < _vertexLayout.AttibsLenght; i++)
+            {
+                GL.VertexArrayAttribBinding(_id, i, next);
+            }
         }
     }
 }

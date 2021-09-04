@@ -64,6 +64,14 @@ namespace Monorail.Renderer
             GL.NamedBufferData(_id, DataSize, IntPtr.Zero, Usage);
         }
 
+        public virtual void Bind()
+        {
+            if (!_disposed)
+            {
+                GL.BindBuffer(Target, _id);
+            }
+        }
+
         public override void Dispose()
         {
             if(!_disposed)
@@ -76,7 +84,15 @@ namespace Monorail.Renderer
 
     public class VertexBuffer : BufferObject
     {
+        public VertexArray VAO { get; set; }
+
         public VertexBuffer() : base(BufferTarget.ArrayBuffer) { }
+
+        public override void Bind()
+        {
+            VAO.Bind();
+            base.Bind();
+        }
     }
 
     public class IndexBuffer : BufferObject

@@ -39,8 +39,15 @@ namespace Monorail.Editor
                 }
                 ImGui.PopStyleVar();
 
-                EditorManager.CurrentScene._registry
-                    .GetView(typeof(Transform2D), typeof(TagComponent)).Each(Entities);
+                var registry = EditorManager.CurrentScene._registry;
+                if (EditorManager.CurrentScene is Scene2D)
+                    registry
+                        .GetView(typeof(Transform2D), typeof(TagComponent))
+                        .Each(Entities2D);
+                else
+                    registry
+                        .GetView(typeof(Transform), typeof(TagComponent))
+                        .Each(Entities);
 
                 // To delete
                 if (ToDelete.IsValid)
@@ -52,14 +59,48 @@ namespace Monorail.Editor
 
         public static void Entities(Group group)
         {
-            var transform = group.Get<Transform2D>();
+            var transform = group.Get<Transform>();
             if (transform.Parent == null)
             {
                 DrawEntity(transform);
             }
         }
 
-        public static void DrawEntity(Transform2D transform)
+        public static void Entities2D(Group group)
+        {
+            var transform = group.Get<Transform2D>();
+            if (transform.Parent == null)
+            {
+                DrawEntity2D(transform);
+            }
+        }
+
+        public static void DrawEntity2D(Transform2D transform)
+        {
+            ImGuiTreeNodeFlags nodeFlags = DefaultFlags;
+            if (SelectedEntity == transform.Entity)
+                nodeFlags |= ImGuiTreeNodeFlags.Selected;
+
+            var tag = EditorManager.CurrentScene._registry.GetComponentRef<TagComponent>(transform.Entity);
+            bool opened = ImGui.TreeNodeEx((IntPtr)transform.Entity.Id, nodeFlags, $"{tag.Tag}");
+
+            if (ImGui.IsItemClicked() && transform.Entity != SelectedEntity)
+            {
+                SelectedEntity = transform.Entity;
+                Inspector.OnSelected(transform.Entity);
+            }
+
+            EntityPopupMenu2D(transform);
+
+            if (opened)
+            {
+                for (int i = 0; i < transform.Children.Count; i++)
+                    DrawEntity2D(transform.Children[i]);
+                ImGui.TreePop();
+            }
+        }
+
+        public static void DrawEntity(Transform transform)
         {
             ImGuiTreeNodeFlags nodeFlags = DefaultFlags;
             if (SelectedEntity == transform.Entity)
@@ -84,7 +125,21 @@ namespace Monorail.Editor
             }
         }
 
-        static void EntityPopupMenu(Transform2D transform)
+        static void EntityPopupMenu2D(Transform2D transform)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new ImVec2(0));
+            if (ImGui.BeginPopupContextItem())
+            {
+                if (ImGui.Selectable("Create Child Entity"))
+                    EditorManager.CurrentScene.CreateEntity(transform.Entity);
+                if (ImGui.Selectable("Delete"))
+                    ToDelete = transform.Entity;
+                ImGui.EndPopup();
+            }
+            ImGui.PopStyleVar();
+        }
+
+        static void EntityPopupMenu(Transform transform)
         {
             ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new ImVec2(0));
             if (ImGui.BeginPopupContextItem())

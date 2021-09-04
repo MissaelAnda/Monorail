@@ -13,6 +13,16 @@ namespace Monorail.Renderer
     {
         public static int DrawCalls { get; private set; } = 0;
 
+        public static CullFaceMode CullFaceMode
+        {
+            get => _cullFaceMode;
+            set
+            {
+                GL.CullFace(value);
+                _cullFaceMode = value;
+            }
+        }
+
         public static Color4 ClearColor
         {
             get => _clearColor;
@@ -35,6 +45,8 @@ namespace Monorail.Renderer
 
         static DebugProc _debugCallback;
 
+        static CullFaceMode _cullFaceMode;
+
         static RenderCommand()
         {
             ClearColor = Color4.Magenta;
@@ -45,38 +57,55 @@ namespace Monorail.Renderer
             Log.Core.Info("Using OpenGL {0}", GL.GetString(StringName.Version));
 
             GL.Enable(EnableCap.DebugOutput);
-            GL.DebugMessageCallback(_debugCallback, (IntPtr)0);
+            GL.DebugMessageCallback(_debugCallback, IntPtr.Zero);
 
             //GL.Enable(EnableCap.FramebufferSrgb);
+            CullFaceMode = CullFaceMode.Back;
         }
 
         public static void ResetDrawCalls() => DrawCalls = 0;
 
         public static void GLDebugCallback(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
         {
-#nullable enable
-            string? msg = Marshal.PtrToStringAnsi(message, length);
-#nullable disable
+            string s = source switch
+            {
+                DebugSource.DebugSourceApi => "API",
+                DebugSource.DebugSourceWindowSystem => "WINDOW SYSTEM",
+                DebugSource.DebugSourceShaderCompiler => "SHADER COMPILER",
+                DebugSource.DebugSourceThirdParty => "THIRD PARTY",
+                DebugSource.DebugSourceApplication => "APPLICATION",
+                _ => "OTHER",
+            };
 
-            if (msg == null)
-                msg = "Failed to decode error message.";
+            string t = type switch
+            {
+                DebugType.DebugTypeError => "ERROR",
+                DebugType.DebugTypeDeprecatedBehavior => "DEPRECATED_BEHAVIOR",
+                DebugType.DebugTypeUndefinedBehavior => "UNDEFINED_BEHAVIOR",
+                DebugType.DebugTypePortability => "PORTABILITY",
+                DebugType.DebugTypePerformance => "PERFORMANCE",
+                DebugType.DebugTypeMarker => "MARKER",
+                _ => "OTHER",
+            };
 
-            string log = string.Format("OpenGL Message: [Source: - {0}] [Type: - {1}] [ID: - {2}]\n[Message: {3}]", source, type, id, msg);
+            var m = Marshal.PtrToStringAnsi(message, length);
+            string mess = s + " " + t + ": " + m;
 
             switch (severity)
             {
-                case DebugSeverity.DebugSeverityHigh:
-                    Log.Core.Error(log);
-                    break;
-                case DebugSeverity.DebugSeverityMedium:
-                    Log.Core.Warn(log);
+                case DebugSeverity.DebugSeverityNotification:
+                    Log.Core.Info(mess);
                     break;
                 case DebugSeverity.DebugSeverityLow:
-                    Log.Core.Notification(log);
+                    Log.Core.Notification(mess);
                     break;
-                default:
+                case DebugSeverity.DebugSeverityMedium:
+                    Log.Core.Warn(mess);
                     break;
-            }
+                case DebugSeverity.DebugSeverityHigh:
+                    Log.Core.Error(mess);
+                    break;
+            };
         }
 
         public static void SetClearMasks(ClearBufferMask masks) => _clearMasks = masks;
@@ -150,13 +179,24 @@ namespace Monorail.Renderer
 
         public static void Clear() => GL.Clear(_clearMasks);
 
-        public static void DrawIndexed(VertexArray vao, BeginMode mode = BeginMode.Triangles, int? elements = null, int offset = 0)
+        public static void DrawIndexed(VertexBuffer vbo, IndexBuffer ibo, BeginMode mode = BeginMode.Triangles, int? elements = null, int offset = 0)
         {
-            Insist.AssertNotNull(vao.IndexBuffer);
-            var elemCount = elements.HasValue ? elements.Value : vao.IndexBuffer.DataLength;
+            Insist.AssertNotNull(vbo);
+            Insist.AssertNotNull(ibo);
+            var elemCount = elements.HasValue ? elements.Value : ibo.DataLength;
 
-            vao.Bind();
-            GL.DrawElements(mode, elemCount, vao.IndexBuffer.ElementsType, offset);
+            vbo.Bind();
+            ibo.Bind();
+            GL.DrawElements(mode, elemCount, ibo.ElementsType, offset);
+            DrawCalls++;
+        }
+
+        public static void DrawArrays(VertexBuffer vbo, PrimitiveType primitive, int count, int offset = 0)
+        {
+            Insist.AssertNotNull(vbo);
+
+            vbo.Bind();
+            GL.DrawArrays(primitive, offset, count);
             DrawCalls++;
         }
 

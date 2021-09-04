@@ -35,7 +35,8 @@ namespace Monorail.Renderer
         // A quad has 6 indices
         List<uint> _indexBatch = new List<uint>(DEFAULT_SIZE * 6);
 
-        VertexArray _vao;
+        VertexBuffer _vbo;
+        IndexBuffer _ibo;
 
         static Batcher()
         {
@@ -50,13 +51,15 @@ namespace Monorail.Renderer
 
         public Batcher()
         {
-            _vao = new VertexArray("Renderer2D", new VertexBuffer(), new IndexBuffer());
-            _vao.VertexBuffer.SetElementSize(Unsafe.SizeOf<Vertex2D>());
-            _vao.VertexBuffer.AllocateEmpty(_vertexBatch.Capacity, BufferUsageHint.DynamicDraw);
+            _vbo = new VertexBuffer();
+            _vbo.SetElementSize(Unsafe.SizeOf<Vertex2D>());
+            _vbo.AllocateEmpty(_vertexBatch.Capacity, BufferUsageHint.DynamicDraw);
+            VertexArray.BindVertexBuffer("Renderer2D", _vbo);
 
-            _vao.IndexBuffer.SetElementSize(sizeof(uint));
-            _vao.IndexBuffer.ElementsType = DrawElementsType.UnsignedInt;
-            _vao.IndexBuffer.AllocateEmpty(_indexBatch.Capacity, BufferUsageHint.DynamicDraw);
+            _ibo = new IndexBuffer();
+            _ibo.SetElementSize(sizeof(uint));
+            _ibo.ElementsType = DrawElementsType.UnsignedInt;
+            _ibo.AllocateEmpty(_indexBatch.Capacity, BufferUsageHint.DynamicDraw);
         }
 
         public Batcher PushVertices(params Vertex2D[] vertex)
@@ -74,8 +77,8 @@ namespace Monorail.Renderer
         public void FlushData()
         {
             // Set vertex subdata
-            if (_vertexBatch.Count > _vao.VertexBuffer.DataLength)
-                _vao.VertexBuffer.AllocateEmpty(_vertexBatch.Count, BufferUsageHint.DynamicDraw);
+            if (_vertexBatch.Count > _vbo.DataLength)
+                _vbo.AllocateEmpty(_vertexBatch.Count, BufferUsageHint.DynamicDraw);
 
             var verticesArray = _vertexBatch.ToArray();
             unsafe
@@ -83,13 +86,13 @@ namespace Monorail.Renderer
                 fixed (Vertex2D* pArray = verticesArray)
                 {
                     IntPtr intPtr = new IntPtr(pArray);
-                    _vao.VertexBuffer.SetSubData(_vertexBatch.Count, intPtr);
+                    _vbo.SetSubData(_vertexBatch.Count, intPtr);
                 }
             }
 
             // Set index subdata
-            if (_indexBatch.Count > _vao.IndexBuffer.DataLength)
-                _vao.IndexBuffer.AllocateEmpty(_indexBatch.Count, BufferUsageHint.DynamicDraw);
+            if (_indexBatch.Count > _ibo.DataLength)
+                _ibo.AllocateEmpty(_indexBatch.Count, BufferUsageHint.DynamicDraw);
 
             var indicesArray = _indexBatch.ToArray();
             unsafe
@@ -97,7 +100,7 @@ namespace Monorail.Renderer
                 fixed (uint* pArray = indicesArray)
                 {
                     IntPtr intPtr = new IntPtr(pArray);
-                    _vao.IndexBuffer.SetSubData(_indexBatch.Count, intPtr);
+                    _ibo.SetSubData(_indexBatch.Count, intPtr);
                 }
             }
         }
@@ -111,7 +114,7 @@ namespace Monorail.Renderer
 
         public void Draw()
         {
-            RenderCommand.DrawIndexed(_vao, BeginMode.Triangles, _indexBatch.Count);
+            RenderCommand.DrawIndexed(_vbo, _ibo, BeginMode.Triangles, _indexBatch.Count);
         }
     }
 }

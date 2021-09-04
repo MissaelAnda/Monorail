@@ -44,7 +44,8 @@ namespace Monorail.Layers.ImGUI
         private bool _frameBegun;
 
         // Veldrid objects
-        private VertexArray _vao;
+        private VertexBuffer _vbo;
+        private IndexBuffer _ibo;
         private int _vertexBufferSize;
         private int _indexBufferSize;
         private ShaderProgram _shaderProgram;
@@ -96,23 +97,22 @@ namespace Monorail.Layers.ImGUI
             _vertexBufferSize = 10000;
             _indexBufferSize = 2000;
             
-            var vertexBuffer = new VertexBuffer();
-            vertexBuffer.SetElementSize(Unsafe.SizeOf<ImDrawVert>());
-            vertexBuffer.AllocateEmpty(_vertexBufferSize, BufferUsageHint.DynamicDraw);
+            _vbo = new VertexBuffer();
+            _vbo.SetElementSize(Unsafe.SizeOf<ImDrawVert>());
+            _vbo.AllocateEmpty(_vertexBufferSize, BufferUsageHint.DynamicDraw);
 
-            var indexBuffer = new IndexBuffer();
-            indexBuffer.SetElementSize(sizeof(ushort));
-            indexBuffer.ElementsType = DrawElementsType.UnsignedShort;
-            indexBuffer.AllocateEmpty(_indexBufferSize, BufferUsageHint.DynamicDraw);
+            _ibo = new IndexBuffer();
+            _ibo.SetElementSize(sizeof(ushort));
+            _ibo.ElementsType = DrawElementsType.UnsignedShort;
+            _ibo.AllocateEmpty(_indexBufferSize, BufferUsageHint.DynamicDraw);
 
-            var imguiVertexLayout = new VertexLayout();
-            imguiVertexLayout.AddAttrib(new VertexAttrib("aPosition", VertexAttribDataType.Float2))
+            var imguiVertexLayout = new VertexLayout()
+                .AddAttrib(new VertexAttrib("aPosition", VertexAttribDataType.Float2))
                 .AddAttrib(new VertexAttrib("aUV", VertexAttribDataType.Float2))
                 .AddAttrib(new VertexAttrib("aColor", VertexAttribDataType.UnsignedByte4, true));
 
             VertexArray.AddVertexLayout("ImGUI_Layout", imguiVertexLayout);
-
-            _vao = new VertexArray("ImGUI_Layout", vertexBuffer, indexBuffer);
+            VertexArray.BindVertexBuffer("ImGUI_Layout", _vbo);
 
             RecreateFontDeviceTexture();
 
@@ -276,19 +276,19 @@ namespace Monorail.Layers.ImGUI
             {
                 ImDrawListPtr cmd_list = draw_data.CmdListsRange[i];
 
-                if (cmd_list.VtxBuffer.Size > _vao.VertexBuffer.DataLength)
+                if (cmd_list.VtxBuffer.Size > _vbo.DataLength)
                 {
                     int newSize = (int)System.Math.Max(_vertexBufferSize * 1.5f, cmd_list.VtxBuffer.Size);
-                    _vao.VertexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
+                    _vbo.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _vertexBufferSize = newSize;
 
                     Log.Core.Info($"Resized dear imgui vertex buffer to new size {_vertexBufferSize}");
                 }
 
-                if (cmd_list.IdxBuffer.Size > _vao.IndexBuffer.DataLength)
+                if (cmd_list.IdxBuffer.Size > _ibo.DataLength)
                 {
                     int newSize = (int)System.Math.Max(_indexBufferSize * 1.5f, cmd_list.IdxBuffer.Size);
-                    _vao.IndexBuffer.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
+                    _ibo.AllocateEmpty(newSize, BufferUsageHint.DynamicDraw);
                     _indexBufferSize = newSize;
 
                     Log.Core.Info($"Resized dear imgui index buffer to new size {_indexBufferSize}");
@@ -305,7 +305,8 @@ namespace Monorail.Layers.ImGUI
 
             _shaderProgram.SetUniformMat4("projection_matrix", false, ref mvp);
             _shaderProgram.Bind();
-            _vao.Bind();
+            _vbo.Bind();
+            _ibo.Bind();
 
             draw_data.ScaleClipRects(io.DisplayFramebufferScale);
 
@@ -322,9 +323,9 @@ namespace Monorail.Layers.ImGUI
             {
                 ImDrawListPtr cmd_list = draw_data.CmdListsRange[n];
 
-                _vao.VertexBuffer.SetSubData(cmd_list.VtxBuffer.Size, cmd_list.VtxBuffer.Data);
+                _vbo.SetSubData(cmd_list.VtxBuffer.Size, cmd_list.VtxBuffer.Data);
 
-                _vao.IndexBuffer.SetSubData(cmd_list.IdxBuffer.Size, cmd_list.IdxBuffer.Data);
+                _ibo.SetSubData(cmd_list.IdxBuffer.Size, cmd_list.IdxBuffer.Data);
 
                 int vtx_offset = 0;
                 int idx_offset = 0;
@@ -369,7 +370,8 @@ namespace Monorail.Layers.ImGUI
 
         public void Dispose()
         {
-            _vao.Dispose();
+            _vbo.Dispose();
+            _ibo.Dispose();
             _texture.Dispose();
             _shaderProgram.Dispose();
         }

@@ -29,8 +29,8 @@ namespace Monorail.Renderer
 
             out VS_OUT {
                 float TexId;
-                vec2     UV;
-                vec4     Color;
+                vec2  UV;
+                vec4  Color;
             } vs_out;
 
             uniform mat4 u_Projection;
