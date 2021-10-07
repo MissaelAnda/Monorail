@@ -51,8 +51,10 @@ namespace Monorail.ECS
         public sealed override void Render(float delta)
         {
             BeforeRender(delta);
-
             RenderTarget.Bind();
+
+            BeforeRender(delta);
+            // TODO: Add Gamma correction
 
             RenderCommand.SetClearColor(ClearColor);
             RenderCommand.SetCaps(EnableCap.Blend, EnableCap.DepthTest);
@@ -66,9 +68,10 @@ namespace Monorail.ECS
             }
             Renderer3D.End();
 
-            RenderTarget.Unbind();
-
+            // TODO: Add to delta the rendering time-lapse
             AfterRender(delta);
+
+            RenderTarget.Unbind();
         }
 
         public sealed override void Update(float delta)

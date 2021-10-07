@@ -87,8 +87,10 @@ namespace Monorail.ECS
 
             if (_mesh.Indices != null)
             {
-                _ibo = new IndexBuffer();
-                _ibo.ElementsType = DrawElementsType.UnsignedInt;
+                _ibo = new IndexBuffer
+                {
+                    ElementsType = DrawElementsType.UnsignedInt
+                };
                 _ibo.SetElementSize(sizeof(uint));
                 _ibo.SetData(_mesh.Indices, BufferUsageHint.StaticDraw);
             }
@@ -96,13 +98,14 @@ namespace Monorail.ECS
 
         public void Draw()
         {
-            if (Texture != null)
-                Texture.Bind(TextureUnit.Texture0);
+            Texture?.Bind(TextureUnit.Texture0);
 
             if (_ibo != null)
                 RenderCommand.DrawIndexed(_vbo, _ibo, BeginMode.Triangles, _mesh.Indices.Length);
             else
                 RenderCommand.DrawArrays(_vbo, PrimitiveType.Triangles, _mesh.Vertices.Length);
+
+            Texture?.Unbind();
         }
     }
 }

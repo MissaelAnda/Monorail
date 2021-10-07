@@ -21,7 +21,7 @@ namespace Monorail.ECS
             _registry.AddComponent(editorCameraEntity, editorCamera);
             Camera = editorCamera;
 
-            // TODO: Cambiar ciclo de vida
+            // TODO: Change lifecycle
             OnLoad();
         }
 
@@ -59,17 +59,17 @@ namespace Monorail.ECS
         {
             RenderTarget.Bind();
 
+            BeforeRender(delta);
+
             RenderCommand.SetClearColor(ClearColor);
             RenderCommand.SetCaps(EnableCap.Blend, EnableCap.DepthTest);
             RenderCommand.SetClearMasks(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             RenderCommand.Clear();
 
-            BeforeRender(delta);
-
             Renderer2D.Begin(Camera2D);
-            foreach (var entity in _registry.GetView(typeof(SpriteRenderer), typeof(Transform2D)).Each())
+            foreach (var (renderer, transform) in _registry.GetView(typeof(SpriteRenderer), typeof(Transform2D)).Unpack<SpriteRenderer, Transform2D>())
             {
-                entity.Get<SpriteRenderer>().Render(entity.Get<Transform2D>());
+                renderer.Render(transform);
             }
             Renderer2D.End();
 

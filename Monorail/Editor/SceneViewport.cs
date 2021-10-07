@@ -4,6 +4,7 @@ using Monorail.Input;
 using Monorail.Util;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System;
 using System.Drawing;
 using ImVec2 = System.Numerics.Vector2;
 
@@ -61,14 +62,24 @@ namespace Monorail.Editor
 
             if (Focused && Keyboard.IsKeyPressed(Keys.Q))
             {
-                var camera = (EditorManager.CurrentScene as Scene2D).Camera2D;
-                camera.Transform.Position = Vector2.Zero;
-                camera.Zoom = 0;
+                if (EditorManager.CurrentScene is Scene2D)
+                {
+                    var camera = (EditorManager.CurrentScene as Scene2D).Camera2D;
+                    camera.Transform.Position = Vector2.Zero;
+                    camera.Zoom = 0;
+                }
+                else
+                {
+                    var camera = (EditorManager.CurrentScene as Scene3D).Camera3D;
+                    camera.Transform.Position = Vector3.Zero;
+                    camera.Transform.Rotation = new Quaternion();
+                    camera.Zoom = 0;
+                }
             }
 
             MouseProcess();
 
-            ImGui.Image(EditorManager.CurrentScene.RenderTarget.Color, Resolution.ToImVec2(), new ImVec2(0, 1), new ImVec2(1, 0));
+            ImGui.Image((IntPtr)EditorManager.CurrentScene.RenderTarget.AttachmentTextureID(Renderer.AttachmentType.Color0), Resolution.ToImVec2(), new ImVec2(0, 1), new ImVec2(1, 0));
             ImGui.End();
             ImGui.PopStyleVar();
 
@@ -110,8 +121,11 @@ namespace Monorail.Editor
             if (contentRegion.IsInside(Mouse.Position) && Mouse.ScrollDeltaY != 0)
                 EditorManager.CurrentScene.Camera.RawZoom -= Mouse.ScrollDeltaY / 10;
 
+            // TODO: Editor camera controllers
+
             if (MovingCamera)
             {
+                // TODO: 3D midldle mouse click pans camera
                 // Currently moving the camera
                 if (Mouse.IsButtonDown(MouseButton.Middle))
                 {
@@ -130,6 +144,8 @@ namespace Monorail.Editor
                     }
                 }
                 else MovingCamera = false;
+
+                // TODO: Right click grants full movement to 3D camera with WASD QE control schema
             }
             else if (Mouse.IsButtonPressed(MouseButton.Middle) && contentRegion.IsInside(Mouse.Position))
             {

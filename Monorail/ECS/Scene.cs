@@ -25,7 +25,8 @@ namespace Monorail.ECS
 
         public Scene()
         {
-            RenderTarget = new Framebuffer(App.Width, App.Height, ColorAttachements.All);
+            // TODO: Add Entity ID texture attachment to RenderTarget
+            RenderTarget = new Framebuffer(App.Width, App.Height, AttachmentType.Color0, AttachmentType.DepthStencilAttachment);
             _resolution = new Vector2(App.Width, App.Height);
         }
 

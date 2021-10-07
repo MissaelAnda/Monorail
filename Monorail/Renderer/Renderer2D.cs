@@ -43,6 +43,7 @@ namespace Monorail.Renderer
                 gl_Position = u_Projection * vec4(a_Position, 1.0);
             }";
 
+        // TODO: Change TexId from float to flat byte
         static readonly string FragmentShader = @"
             #version 330 core
             out vec4 FragColor;

@@ -52,6 +52,12 @@ namespace Monorail.ECS
             }
         }
 
+        public ProjectionType ProjectionType
+        {
+            get => _type;
+            set => SetProjectionType(value);
+        }
+
         public Vector2 Resolution { get => _resolution; set => SetResolution(value); }
 
         public float Zoom { get => _zoom; set => SetZoom(value); }
@@ -109,6 +115,17 @@ namespace Monorail.ECS
                 // TODO: Raw zoom
                 _zoom = zoom;
                 _dirtyType |= DirtyType.Projection;
+            }
+
+            return this;
+        }
+
+        public Camera3D SetProjectionType(ProjectionType type)
+        {
+            if (_type != type)
+            {
+                _type = type;
+                _dirtyType = DirtyType.Projection;
             }
 
             return this;

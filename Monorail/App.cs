@@ -32,8 +32,6 @@ namespace Monorail
 
             Mouse._window = this;
             Keyboard._window = this;
-
-            Renderer3D.Initialize();
         }
 
         protected override void OnLoad()
@@ -89,6 +87,8 @@ namespace Monorail
             RenderCommand.SetViewportSize(e.Width, e.Height);
             Width = e.Width;
             Height = e.Height;
+
+            Renderer3D.Resize(Width, Height);
         }
     }
 }
