@@ -5,20 +5,32 @@ This is more of a learning project for computer graphics aiming to do the bare m
 
 ## Roadmap
 - [x] 2D batch rendering
+    - [X] Camera frustum culling
+- [ ] Canvas for UI with editor
+    - [ ] TTF loading
 - [ ] Advanced 3D rendering
-    - [ ] Advanced lighting
+    - [ ] Forward clustered Rendering
+    - [ ] PBR
     - [ ] Cascade Shadow Mapping
-    - [ ] Deferred rendering
-- [ ] 2D/3D Level editor
-- [ ] 2D/3D physics
-    - [ ] Static bodies
-    - [ ] Dynamic bodies
-    - [ ] Rigid bodies
-- [ ] Entity-Component Scene
+    - [ ] PCSS shadows
+    - [ ] Basic global ilumination
+    - [ ] User defined shaders (Custom GLSL)
+    - [ ] SSAO
+    - [ ] SSR
+    - [ ] Procedural Environment
+    - [ ] Skybox/IBL
+    - [ ] Volumetric light
+    - [ ] Volumetric Clouds
+    - [ ] Bloom
+    - [ ] Camera frustum culling
+- [ ] 2D/3D Scene editor
+    - [ ] Gizmos
+- [ ] Basic 2D/3D physics integration
+- [X] Entity-Component Scene
 - [ ] Scripting functionality
 
 ## Dependencies
-- .Net Core 3.1
+- .Net Core 5.0
 - The core of this engine is [OpenTK 4](https://github.com/opentk/opentk)
 - For console logging: [Colorful Console](https://github.com/tomakita/Colorful.Console)
 - For GUI: [ImGui.NET](https://github.com/mellinoe/imgui.net)
